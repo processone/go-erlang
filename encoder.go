@@ -7,6 +7,11 @@ import (
 	"reflect"
 )
 
+// Atom is a wrapper structure to support Erlang atom data type.
+type Atom struct {
+	Value string
+}
+
 // Use Erlang Term Format
 // Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
 func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
@@ -14,8 +19,9 @@ func EncodeCall(module string, function string, args ...interface{}) bytes.Buffe
 	// Header for External Erlang Terms
 	buffer.Write([]byte{131})
 
-	// We passe a tuple with 4 parameters
+	// We pass a tuple with 4 parameters
 	buffer.Write([]byte{104, 4})
+
 	// 1. atom(call)
 	str := "call"
 	buffer.Write([]byte{119, byte(len(str))})
@@ -93,17 +99,10 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 
 func encodeString(buf *bytes.Buffer, str string) error {
 	// TODO make binary tag a constant
-	if err := buf.WriteByte(109); err != nil {
-		return err
-	}
-
+	buf.WriteByte(109)
 	if err := binary.Write(buf, binary.BigEndian, uint32(len(str))); err != nil {
 		return err
 	}
-
-	if _, err := buf.WriteString(str); err != nil {
-		return err
-	}
-
+	buf.WriteString(str)
 	return nil
 }
