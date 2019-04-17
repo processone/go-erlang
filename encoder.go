@@ -69,29 +69,6 @@ func EncodeCall(module string, function string, args ...interface{}) bytes.Buffe
 	return buffer
 }
 
-/*
-func Encode(term interface{}) ([]byte, error) {
-	v := reflect.ValueOf(term)
-	switch v.Kind() {
-	case reflect.String:
-		encodeStringBinary(v.String())
-	default:
-		fmt.Printf("Unhandled type %v (%v)\n", v.Kind(), reflect.TypeOf(term).Elem().Name())
-	}
-	return []byte{}, nil
-}
-
-func encodeStringBinary(str string) []byte {
-	headerLength := 5
-	strLength := len(str)
-	totalLength := headerLength + strLength
-	hdr := make([]byte, totalLength)
-	hdr[0] = 109
-	binary.BigEndian.PutUint32(hdr[1:5], uint32(totalLength))
-	return append(hdr, []byte(str)...)
-}
-*/
-
 func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
 	switch t := term.(type) {
@@ -99,6 +76,10 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 		err = encodeAtom(buf, t.Value)
 	case string:
 		err = encodeString(buf, t)
+	case int:
+		err = encodeInt(buf, int32(t))
+	case int8:
+		err = encodeInt(buf, int32(t))
 	default:
 		v := reflect.ValueOf(term)
 		err = fmt.Errorf("unhandled type: %v", v.Kind())
@@ -110,12 +91,12 @@ func encodeAtom(buf *bytes.Buffer, str string) error {
 	// Encode atom header
 	if len(str) <= 255 {
 		// Encode small UTF8 atom
-		buf.WriteByte(119)
+		buf.WriteByte(119) // TODO const
 		buf.WriteByte(byte(len(str)))
 	} else {
 		// Encode standard UTF8 atom
-		buf.WriteByte(118)
-		if err := binary.Write(buf, binary.BigEndian, uint32(len(str))); err != nil {
+		buf.WriteByte(118) // TODO const
+		if err := binary.Write(buf, binary.BigEndian, uint16(len(str))); err != nil {
 			return err
 		}
 	}
@@ -132,5 +113,13 @@ func encodeString(buf *bytes.Buffer, str string) error {
 		return err
 	}
 	buf.WriteString(str)
+	return nil
+}
+
+func encodeInt(buf *bytes.Buffer, i int32) error {
+	buf.WriteByte(98) // TODO const
+	if err := binary.Write(buf, binary.BigEndian, i); err != nil {
+		return err
+	}
 	return nil
 }

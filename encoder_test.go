@@ -2,6 +2,7 @@ package bert_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"testing"
 
 	"github.com/processone/bert"
@@ -32,15 +33,10 @@ func TestEncodeInt(t *testing.T) {
 	if err := bert.EncodeTo(&buf, 42); err != nil {
 		t.Error(err)
 	}
-}
-
-/*
-func BenchmarkEncodeString(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_, _ = bert.Encode("test")
+	if binary.BigEndian.Uint32(buf.Bytes()[1:5]) != 42 {
+		t.Errorf("Unexpected int value")
 	}
 }
-*/
 
 func BenchmarkBufferString(b *testing.B) {
 	var buf bytes.Buffer
