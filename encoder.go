@@ -96,7 +96,7 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
 	switch t := term.(type) {
 	case Atom:
-		fmt.Println("This is an atom")
+		err = encodeAtom(buf, t.Value)
 	case string:
 		err = encodeString(buf, t)
 	default:
@@ -104,6 +104,25 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 		err = fmt.Errorf("unhandled type: %v", v.Kind())
 	}
 	return err
+}
+
+func encodeAtom(buf *bytes.Buffer, str string) error {
+	// Encode atom header
+	if len(str) <= 255 {
+		// Encode small UTF8 atom
+		buf.WriteByte(119)
+		buf.WriteByte(byte(len(str)))
+	} else {
+		// Encode standard UTF8 atom
+		buf.WriteByte(118)
+		if err := binary.Write(buf, binary.BigEndian, uint32(len(str))); err != nil {
+			return err
+		}
+	}
+
+	// Write atom
+	buf.WriteString(str)
+	return nil
 }
 
 func encodeString(buf *bytes.Buffer, str string) error {

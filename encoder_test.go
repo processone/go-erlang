@@ -7,11 +7,15 @@ import (
 	"github.com/processone/bert"
 )
 
-func TestEncodeAtom(t *testing.T) {
+func TestEncodeSmallAtom(t *testing.T) {
 	atom := bert.Atom{Value: "atom"}
 	var buf bytes.Buffer
 	if err := bert.EncodeTo(&buf, atom); err != nil {
 		t.Error(err)
+	}
+	result := append([]byte{119, byte(len(atom.Value))}, []byte(atom.Value)...)
+	if !bytes.Equal(buf.Bytes(), result) {
+		t.Errorf("Unexpected encoding")
 	}
 }
 
