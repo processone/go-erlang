@@ -12,6 +12,13 @@ type Atom struct {
 	Value string
 }
 
+// Charlist is a wrapper structure to support Erlang charlist in encoding.
+// Charlist is only used in encoding. On decoding, charlists are always decoded
+// as strings.
+type CharList struct {
+	Value string
+}
+
 // Use Erlang Term Format
 // Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
 func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
@@ -54,7 +61,7 @@ func EncodeCall(module string, function string, args ...interface{}) bytes.Buffe
 			buffer.Write(len4Bytes)
 			buffer.WriteString(v.String())
 		default:
-			fmt.Printf("Unhandled type %v\n", v.Kind())
+			fmt.Printf("Unhandled type %v (%v)\n", v.Kind(), reflect.TypeOf(arg).Elem().Name())
 		}
 	}
 	buffer.Write([]byte{106}) // nil terminates the list
@@ -62,13 +69,14 @@ func EncodeCall(module string, function string, args ...interface{}) bytes.Buffe
 	return buffer
 }
 
+/*
 func Encode(term interface{}) ([]byte, error) {
 	v := reflect.ValueOf(term)
 	switch v.Kind() {
 	case reflect.String:
 		encodeStringBinary(v.String())
 	default:
-		fmt.Printf("Unhandled type %v\n", v.Kind())
+		fmt.Printf("Unhandled type %v (%v)\n", v.Kind(), reflect.TypeOf(term).Elem().Name())
 	}
 	return []byte{}, nil
 }
@@ -82,17 +90,18 @@ func encodeStringBinary(str string) []byte {
 	binary.BigEndian.PutUint32(hdr[1:5], uint32(totalLength))
 	return append(hdr, []byte(str)...)
 }
+*/
 
 func EncodeTo(buf *bytes.Buffer, term interface{}) error {
-	v := reflect.ValueOf(term)
-
 	var err error
-	switch v.Kind() {
-	case reflect.String:
-		err = encodeString(buf, v.String())
+	switch t := term.(type) {
+	case Atom:
+		fmt.Println("This is an atom")
+	case string:
+		err = encodeString(buf, t)
 	default:
-		fmt.Printf("Unhandled type %v\n", v.Kind())
-		err = fmt.Errorf("unhandled type: %s", v.Kind())
+		v := reflect.ValueOf(term)
+		err = fmt.Errorf("unhandled type: %v", v.Kind())
 	}
 	return err
 }
