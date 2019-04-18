@@ -12,6 +12,10 @@ type Atom struct {
 	Value string
 }
 
+type Tuple struct {
+	Elems []interface{}
+}
+
 // Charlist is a wrapper structure to support Erlang charlist in encoding.
 // Charlist is only used in encoding. On decoding, charlists are always decoded
 // as strings.
@@ -23,14 +27,18 @@ type CharList struct {
 const (
 	TagSmallInteger  = 97
 	TagInteger       = 98
+	TagSmallTuple    = 104
+	TagLargeTuple    = 105
 	TagBinary        = 109
 	TagAtomUTF8      = 118
 	TagSmallAtomUTF8 = 119
+	TagETFVersion    = 131
 )
 
 func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
 	switch t := term.(type) {
+
 	case Atom:
 		err = encodeAtom(buf, t.Value)
 	case string:
@@ -53,9 +61,12 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	case uint32:
 		err = encodeInt(buf, int32(t))
 
+	case Tuple:
+		err = encodeTuple(buf, t)
+
 	default:
 		v := reflect.ValueOf(term)
-		err = fmt.Errorf("unhandled type: %v", v.Kind())
+		err = fmt.Errorf("unhandled type: %v - %v", v.Kind(), v.Type().Name())
 	}
 	return err
 }
@@ -95,6 +106,17 @@ func encodeInt(buf *bytes.Buffer, i int32) error {
 	} else {
 		buf.WriteByte(TagInteger)
 		if err := binary.Write(buf, binary.BigEndian, i); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
+	buf.WriteByte(TagSmallTuple)
+	buf.WriteByte(byte(len(tuple.Elems)))
+	for _, elem := range tuple.Elems {
+		if err := EncodeTo(buf, elem); err != nil {
 			return err
 		}
 	}
