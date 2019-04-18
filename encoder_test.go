@@ -2,7 +2,6 @@ package bert_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"testing"
 
 	"github.com/processone/bert"
@@ -29,12 +28,27 @@ func TestEncodeString(t *testing.T) {
 }
 
 func TestEncodeInt(t *testing.T) {
-	var buf bytes.Buffer
-	if err := bert.EncodeTo(&buf, 42); err != nil {
-		t.Error(err)
+	var IntTests = []struct {
+		n        int
+		expected []byte
+	}{
+		// TODO: Include standalone header in that test 131.
+		{-1, []byte{bert.TagInteger, 255, 255, 255, 255}},
+		{1, []byte{bert.TagSmallInteger, 1}},
+		{42, []byte{bert.TagSmallInteger, 42}},
+		{255, []byte{bert.TagSmallInteger, 255}},
+		{256, []byte{bert.TagInteger, 0, 0, 1, 0}},
+		{1000, []byte{bert.TagInteger, 0, 0, 3, 232}},
 	}
-	if binary.BigEndian.Uint32(buf.Bytes()[1:5]) != 42 {
-		t.Errorf("Unexpected int value")
+
+	for _, tt := range IntTests {
+		var buf bytes.Buffer
+		if err := bert.EncodeTo(&buf, tt.n); err != nil {
+			t.Error(err)
+		}
+		if !bytes.Equal(buf.Bytes(), tt.expected) {
+			t.Errorf("EncodeInt %d: expected %v, actual %v", tt.n, tt.expected, buf)
+		}
 	}
 }
 
