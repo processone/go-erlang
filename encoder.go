@@ -19,6 +19,7 @@ type CharList struct {
 	Value string
 }
 
+// Supported types
 const (
 	TagSmallInteger  = 97
 	TagInteger       = 98
