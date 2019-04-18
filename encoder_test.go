@@ -96,6 +96,27 @@ func TestEncodeTuple(t *testing.T) {
 	}
 }
 
+func TestEncodeLargeTuple(t *testing.T) {
+	var els []interface{}
+
+	for el := 0; el < 256; el++ {
+		els = append(els, el)
+	}
+	tuple := bert.Tuple{els}
+
+	var buf bytes.Buffer
+	if err := bert.EncodeTo(&buf, tuple); err != nil {
+		t.Error(err)
+	}
+
+	// Inspect header
+	expected := []byte{105, 0, 0, 1, 0}
+	header := buf.Bytes()[0:5]
+	if !bytes.Equal(header, expected) {
+		t.Errorf("EncodeTuple: expected %v, actual %v", expected, header)
+	}
+}
+
 func BenchmarkBufferString(b *testing.B) {
 	var buf bytes.Buffer
 	for i := 0; i < b.N; i++ {

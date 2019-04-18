@@ -122,8 +122,21 @@ func encodeInt(buf *bytes.Buffer, i int32) error {
 }
 
 func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
-	buf.WriteByte(TagSmallTuple)
-	buf.WriteByte(byte(len(tuple.Elems)))
+	// Tuple header
+	size := len(tuple.Elems)
+	if size <= 255 {
+		// Encode small tuple
+		buf.WriteByte(TagSmallTuple)
+		buf.WriteByte(byte(size))
+	} else {
+		// Encode large tuple
+		buf.WriteByte(TagLargeTuple)
+		if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
+			return err
+		}
+	}
+
+	// Tuple content
 	for _, elem := range tuple.Elems {
 		if err := EncodeTo(buf, elem); err != nil {
 			return err
