@@ -16,6 +16,8 @@ type Tuple struct {
 	Elems []interface{}
 }
 
+type List []interface{}
+
 // Charlist is a wrapper structure to support Erlang charlist in encoding.
 // Charlist is only used in encoding. On decoding, charlists are always decoded
 // as strings.
@@ -32,12 +34,17 @@ func T(el ...interface{}) Tuple {
 	return Tuple{el}
 }
 
+func L(el ...interface{}) []interface{} {
+	return el
+}
+
 // Supported types
 const (
 	TagSmallInteger  = 97
 	TagInteger       = 98
 	TagSmallTuple    = 104
 	TagLargeTuple    = 105
+	TagList          = 108
 	TagBinary        = 109
 	TagAtomUTF8      = 118
 	TagSmallAtomUTF8 = 119
@@ -74,8 +81,21 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 		err = encodeTuple(buf, t)
 
 	default:
+		// Handle special Go pointer types
 		v := reflect.ValueOf(term)
-		err = fmt.Errorf("unhandled type: %v - %v", v.Kind(), v.Type().Name())
+		switch v.Kind() {
+		case reflect.Slice:
+			// TODO: handle reflect.Array
+			var list []interface{}
+			list, err = makeGenericSlice(term)
+			if err != nil {
+				err = fmt.Errorf("error converting slice: %v - %v:\n%v", v.Kind(), v.Type().Name(), err)
+				break
+			}
+			err = encodeList(buf, list)
+		default:
+			err = fmt.Errorf("unhandled type: %v - %v", v.Kind(), v.Type().Name())
+		}
 	}
 	return err
 }
@@ -143,4 +163,42 @@ func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
 		}
 	}
 	return nil
+}
+
+func encodeList(buf *bytes.Buffer, list []interface{}) error {
+	var err error
+	// TODO: Special case for empty list: v.Len() ? Should not be needed
+
+	buf.WriteByte(TagList)
+	if err := binary.Write(buf, binary.BigEndian, int32(len(list))); err != nil {
+		return err
+	}
+
+	for _, elem := range list {
+		if err := EncodeTo(buf, elem); err != nil {
+			return err
+		}
+	}
+	// nil terminates the list:
+	buf.Write([]byte{106})
+	return err
+}
+
+// Helpers
+
+func makeGenericSlice(slice interface{}) ([]interface{}, error) {
+	s := reflect.ValueOf(slice)
+	switch s.Kind() {
+	case reflect.Slice, reflect.Array:
+		generic := make([]interface{}, s.Len())
+
+		for i := 0; i < s.Len(); i++ {
+			generic[i] = s.Index(i).Interface()
+		}
+
+		return generic, nil
+	default:
+		return []interface{}{},
+			fmt.Errorf("cannot make a generic slice from something that is not a slice: %v", s.Kind())
+	}
 }

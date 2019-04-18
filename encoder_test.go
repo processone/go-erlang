@@ -117,6 +117,30 @@ func TestEncodeLargeTuple(t *testing.T) {
 	}
 }
 
+func TestEncodeList(t *testing.T) {
+	list := bert.L(bert.A("atom"), "string", 42)
+
+	var buf bytes.Buffer
+	if err := bert.EncodeTo(&buf, list); err != nil {
+		t.Error(err)
+	}
+	// Use new utf8 atom (119), instead of old deprecated atom (100)
+	expected := []byte{108, 0, 0, 0, 3, 119, 4, 97, 116, 111, 109, 109, 0, 0, 0, 6, 115,
+		116, 114, 105, 110, 103, 97, 42, 106}
+	if !bytes.Equal(buf.Bytes(), expected) {
+		t.Errorf("EncodeTuple: expected %v, actual %v", expected, buf.Bytes())
+	}
+}
+
+func TestEncodeIntSlice(t *testing.T) {
+	list := []int{1, 2, 3}
+
+	var buf bytes.Buffer
+	if err := bert.EncodeTo(&buf, list); err != nil {
+		t.Error(err)
+	}
+}
+
 func BenchmarkBufferString(b *testing.B) {
 	var buf bytes.Buffer
 	for i := 0; i < b.N; i++ {
