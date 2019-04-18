@@ -42,7 +42,7 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	case int16:
 		err = encodeInt(buf, int32(t))
 	case int32:
-		err = encodeInt(buf, int32(t))
+		err = encodeInt(buf, t)
 	case uint:
 		err = encodeInt(buf, int32(t))
 	case uint8:
