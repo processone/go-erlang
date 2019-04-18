@@ -34,10 +34,24 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 		err = encodeAtom(buf, t.Value)
 	case string:
 		err = encodeString(buf, t)
+
 	case int:
 		err = encodeInt(buf, int32(t))
 	case int8:
 		err = encodeInt(buf, int32(t))
+	case int16:
+		err = encodeInt(buf, int32(t))
+	case int32:
+		err = encodeInt(buf, int32(t))
+	case uint:
+		err = encodeInt(buf, int32(t))
+	case uint8:
+		err = encodeInt(buf, int32(t))
+	case uint16:
+		err = encodeInt(buf, int32(t))
+	case uint32:
+		err = encodeInt(buf, int32(t))
+
 	default:
 		v := reflect.ValueOf(term)
 		err = fmt.Errorf("unhandled type: %v", v.Kind())
