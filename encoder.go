@@ -51,7 +51,21 @@ const (
 	TagETFVersion    = 131
 )
 
-func EncodeTo(buf *bytes.Buffer, term interface{}) error {
+// Marshal serializes a term as a Bert structure
+func Marshal(term interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+
+	// Header for External Erlang Term Format
+	buf.Write([]byte{TagETFVersion})
+
+	// Marshal the data
+	if err := encodeTo(&buf, term); err != nil {
+		return []byte{}, err
+	}
+	return buf.Bytes(), nil
+}
+
+func encodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
 	switch t := term.(type) {
 
@@ -101,13 +115,13 @@ func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 }
 
 func encodeAtom(buf *bytes.Buffer, str string) error {
-	// Encode atom header
+	// Marshal atom header
 	if len(str) <= 255 {
-		// Encode small UTF8 atom
+		// Marshal small UTF8 atom
 		buf.WriteByte(TagSmallAtomUTF8)
 		buf.WriteByte(byte(len(str)))
 	} else {
-		// Encode standard UTF8 atom
+		// Marshal standard UTF8 atom
 		buf.WriteByte(TagAtomUTF8)
 		if err := binary.Write(buf, binary.BigEndian, uint16(len(str))); err != nil {
 			return err
@@ -145,11 +159,11 @@ func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
 	// Tuple header
 	size := len(tuple.Elems)
 	if size <= 255 {
-		// Encode small tuple
+		// Marshal small tuple
 		buf.WriteByte(TagSmallTuple)
 		buf.WriteByte(byte(size))
 	} else {
-		// Encode large tuple
+		// Marshal large tuple
 		buf.WriteByte(TagLargeTuple)
 		if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
 			return err
@@ -158,7 +172,7 @@ func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
 
 	// Tuple content
 	for _, elem := range tuple.Elems {
-		if err := EncodeTo(buf, elem); err != nil {
+		if err := encodeTo(buf, elem); err != nil {
 			return err
 		}
 	}
@@ -169,13 +183,15 @@ func encodeList(buf *bytes.Buffer, list []interface{}) error {
 	var err error
 	// TODO: Special case for empty list: v.Len() ? Should not be needed
 
+	// List header
 	buf.WriteByte(TagList)
 	if err := binary.Write(buf, binary.BigEndian, int32(len(list))); err != nil {
 		return err
 	}
 
+	// List content
 	for _, elem := range list {
-		if err := EncodeTo(buf, elem); err != nil {
+		if err := encodeTo(buf, elem); err != nil {
 			return err
 		}
 	}
@@ -184,6 +200,7 @@ func encodeList(buf *bytes.Buffer, list []interface{}) error {
 	return err
 }
 
+// ============================================================================
 // Helpers
 
 func makeGenericSlice(slice interface{}) ([]interface{}, error) {
