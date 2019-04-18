@@ -87,7 +87,7 @@ func TestEncodeTuple(t *testing.T) {
 		t.Error(err)
 	}
 
-	// In Erlang, generated tuple was using deprecated atom header 100,0,4 instead of 119, 4
+	// In Erlang, generated tuple was using deprecated atom header 100,0,4 instead of 119, 4 (right after 104, 3)
 	// However, the new version decodes just fine.
 	// TODO: Deserialization should support deprecated header decoding
 	expected := []byte{104, 3, 119, 4, 97, 116, 111, 109, 109, 0, 0, 0, 6, 115, 116, 114, 105, 110, 103, 97, 42}
