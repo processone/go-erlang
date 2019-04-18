@@ -54,15 +54,23 @@ const (
 // Marshal serializes a term as a Bert structure
 func Marshal(term interface{}) ([]byte, error) {
 	var buf bytes.Buffer
+	if err := MarshalTo(&buf, term); err != nil {
+		return []byte{}, err
+	}
+	return buf.Bytes(), nil
+}
 
+// Use Erlang Term Format
+// Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
+func MarshalTo(buf *bytes.Buffer, term interface{}) error {
 	// Header for External Erlang Term Format
 	buf.Write([]byte{TagETFVersion})
 
 	// Marshal the data
-	if err := encodeTo(&buf, term); err != nil {
-		return []byte{}, err
+	if err := encodeTo(buf, term); err != nil {
+		return err
 	}
-	return buf.Bytes(), nil
+	return nil
 }
 
 func encodeTo(buf *bytes.Buffer, term interface{}) error {

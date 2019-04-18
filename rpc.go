@@ -3,57 +3,27 @@ package bert
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"reflect"
 )
 
-// Use Erlang Term Format
-// Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
-// TODO: Add Length to compose BERP (BERT Packet)
-func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
-	var buffer bytes.Buffer
-	// Header for External Erlang Terms
-	buffer.Write([]byte{TagETFVersion})
+// EncodeCall prepare a BERT-RPC Packet
+// See: http://bert-rpc.org/
+func EncodeCall(module string, function string, args ...interface{}) (bytes.Buffer, error) {
+	var buf bytes.Buffer
 
-	// We pass a tuple with 4 parameters
-	buffer.Write([]byte{104, 4})
-
-	// 1. atom(call)
-	str := "call"
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 2. atom(erlang_module)
-	str = module
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 3. atom(function)
-	// Note: The function needs to be exported
-	str = function
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 4. Function Arguments [...]
-	len4Bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(len4Bytes, uint32(len(args)))
-	buffer.WriteByte(108)
-	buffer.Write(len4Bytes)
-
-	for _, arg := range args {
-		fmt.Println(arg)
-		v := reflect.ValueOf(arg)
-		switch v.Kind() {
-		case reflect.String:
-			binary.BigEndian.PutUint32(len4Bytes, uint32(len(v.String())))
-			buffer.WriteByte(109)
-			buffer.Write(len4Bytes)
-			buffer.WriteString(v.String())
-		default:
-			fmt.Printf("Unhandled type %v (%v)\n", v.Kind(), reflect.TypeOf(arg).Elem().Name())
-		}
+	// -- {call, Module, Function, Arguments}
+	call := T(A("call"), A(module), A(function), args)
+	data, err := Marshal(call)
+	if err != nil {
+		return buf, err
 	}
-	buffer.Write([]byte{106}) // nil terminates the list
 
-	return buffer
+	// BERP Header = 4-bytes length
+	// TODO: This should be optional as it forces an extra allocation, instead of directly writing to the buffer
+	if err := binary.Write(&buf, binary.BigEndian, uint32(len(data))); err != nil {
+		return buf, err
+	}
+
+	// Finally, write the data, after the length header
+	buf.Write(data)
+	return buf, err
 }
