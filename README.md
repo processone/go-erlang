@@ -5,7 +5,7 @@ BERT library for Go is designed for simple data exchange between Go and Erlang/E
 BERT stands for Binary ERlang Term. It is a Remote Procedure Call mechanism to support interop between Erlang code\
 and other programming languages.
 
-BERT Go library implements serialization and deserialization, as well as a subset / variation of the BERT-RPC protocol
+BERT library implements serialization and deserialization, as well as a subset / variation of the BERT-RPC protocol
 for Go.
 
 Here are the important points to note:
