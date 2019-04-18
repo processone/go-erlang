@@ -13,7 +13,7 @@ import (
 func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
 	var buffer bytes.Buffer
 	// Header for External Erlang Terms
-	buffer.Write([]byte{131})
+	buffer.Write([]byte{TagETFVersion})
 
 	// We pass a tuple with 4 parameters
 	buffer.Write([]byte{104, 4})
