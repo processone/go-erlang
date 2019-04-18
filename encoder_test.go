@@ -8,7 +8,7 @@ import (
 )
 
 func TestEncodeSmallAtom(t *testing.T) {
-	atom := bert.Atom{Value: "atom"}
+	atom := bert.A("atom")
 	var buf bytes.Buffer
 	if err := bert.EncodeTo(&buf, atom); err != nil {
 		t.Error(err)
@@ -80,7 +80,7 @@ func TestEncodeMiscInt(t *testing.T) {
 }
 
 func TestEncodeTuple(t *testing.T) {
-	tuple := bert.Tuple{Elems: []interface{}{bert.Atom{"atom"}, "string", 42}}
+	tuple := bert.T(bert.A("atom"), "string", 42)
 
 	var buf bytes.Buffer
 	if err := bert.EncodeTo(&buf, tuple); err != nil {

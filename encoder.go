@@ -23,6 +23,15 @@ type CharList struct {
 	Value string
 }
 
+// Short factory functions to help write short structure generation code.
+func A(str string) Atom {
+	return Atom{str}
+}
+
+func T(el ...interface{}) Tuple {
+	return Tuple{el}
+}
+
 // Supported types
 const (
 	TagSmallInteger  = 97
