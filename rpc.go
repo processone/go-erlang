@@ -18,7 +18,8 @@ func EncodeCall(module string, function string, args ...interface{}) (bytes.Buff
 	}
 
 	// BERP Header = 4-bytes length
-	// TODO: This should be optional as it forces an extra allocation, instead of directly writing to the buffer
+	// TODO: This should be optional for HTTP as it forces an extra allocation, instead of directly writing to the buffer
+	//       We already have packet framing at the HTTP call level.
 	if err := binary.Write(&buf, binary.BigEndian, uint32(len(data))); err != nil {
 		return buf, err
 	}
