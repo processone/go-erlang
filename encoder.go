@@ -19,55 +19,13 @@ type CharList struct {
 	Value string
 }
 
-// Use Erlang Term Format
-// Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
-func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
-	var buffer bytes.Buffer
-	// Header for External Erlang Terms
-	buffer.Write([]byte{131})
-
-	// We pass a tuple with 4 parameters
-	buffer.Write([]byte{104, 4})
-
-	// 1. atom(call)
-	str := "call"
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 2. atom(erlang_module)
-	str = module
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 3. atom(function)
-	// Note: The function needs to be exported
-	str = function
-	buffer.Write([]byte{119, byte(len(str))})
-	buffer.WriteString(str)
-
-	// 4. Function Arguments [...]
-	len4Bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(len4Bytes, uint32(len(args)))
-	buffer.WriteByte(108)
-	buffer.Write(len4Bytes)
-
-	for _, arg := range args {
-		fmt.Println(arg)
-		v := reflect.ValueOf(arg)
-		switch v.Kind() {
-		case reflect.String:
-			binary.BigEndian.PutUint32(len4Bytes, uint32(len(v.String())))
-			buffer.WriteByte(109)
-			buffer.Write(len4Bytes)
-			buffer.WriteString(v.String())
-		default:
-			fmt.Printf("Unhandled type %v (%v)\n", v.Kind(), reflect.TypeOf(arg).Elem().Name())
-		}
-	}
-	buffer.Write([]byte{106}) // nil terminates the list
-
-	return buffer
-}
+const (
+	TagSmallInteger  = 97
+	TagInteger       = 98
+	TagBinary        = 109
+	TagAtomUTF8      = 118
+	TagSmallAtomUTF8 = 119
+)
 
 func EncodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
@@ -91,11 +49,11 @@ func encodeAtom(buf *bytes.Buffer, str string) error {
 	// Encode atom header
 	if len(str) <= 255 {
 		// Encode small UTF8 atom
-		buf.WriteByte(119) // TODO const
+		buf.WriteByte(TagSmallAtomUTF8)
 		buf.WriteByte(byte(len(str)))
 	} else {
 		// Encode standard UTF8 atom
-		buf.WriteByte(118) // TODO const
+		buf.WriteByte(TagAtomUTF8)
 		if err := binary.Write(buf, binary.BigEndian, uint16(len(str))); err != nil {
 			return err
 		}
@@ -107,8 +65,7 @@ func encodeAtom(buf *bytes.Buffer, str string) error {
 }
 
 func encodeString(buf *bytes.Buffer, str string) error {
-	// TODO make binary tag a constant
-	buf.WriteByte(109)
+	buf.WriteByte(TagBinary)
 	if err := binary.Write(buf, binary.BigEndian, uint32(len(str))); err != nil {
 		return err
 	}
@@ -116,8 +73,9 @@ func encodeString(buf *bytes.Buffer, str string) error {
 	return nil
 }
 
+// TODO Add support for smal integer encoding
 func encodeInt(buf *bytes.Buffer, i int32) error {
-	buf.WriteByte(98) // TODO const
+	buf.WriteByte(TagInteger)
 	if err := binary.Write(buf, binary.BigEndian, i); err != nil {
 		return err
 	}
