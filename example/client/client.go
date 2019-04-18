@@ -1,3 +1,4 @@
+// Example client showing how to use BERT-RPC to create a user in ejabberd.
 package main
 
 import (

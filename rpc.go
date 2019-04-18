@@ -9,6 +9,7 @@ import (
 
 // Use Erlang Term Format
 // Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
+// TODO: Add Length to compose BERP (BERT Packet)
 func EncodeCall(module string, function string, args ...interface{}) bytes.Buffer {
 	var buffer bytes.Buffer
 	// Header for External Erlang Terms

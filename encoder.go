@@ -73,7 +73,7 @@ func encodeString(buf *bytes.Buffer, str string) error {
 	return nil
 }
 
-// TODO Add support for smal integer encoding
+// TODO Add support for small integer encoding
 func encodeInt(buf *bytes.Buffer, i int32) error {
 	buf.WriteByte(TagInteger)
 	if err := binary.Write(buf, binary.BigEndian, i); err != nil {
