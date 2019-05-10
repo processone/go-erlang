@@ -44,6 +44,7 @@ func TestDecodeInt(t *testing.T) {
 	}
 }
 
+// TODO: Implement decodeAtom to []byte and bert.Atom
 func TestDecodeAtomToString(t *testing.T) {
 	longUTF8 := strings.Repeat("🖖", 64)
 	tests := []struct {
