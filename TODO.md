@@ -7,4 +7,6 @@
   However, I need to consider if I should always add it for consistency. It would also allow grouping several calls
   in a single HTTP request.
 - Support zlib compression.
-- Add Server example
+- Add Server example.
+- Performance optimization.
+- Support new error package (Go 2).

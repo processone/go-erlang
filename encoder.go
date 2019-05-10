@@ -40,15 +40,16 @@ func L(el ...interface{}) []interface{} {
 
 // Supported types
 const (
-	TagSmallInteger  = 97
-	TagInteger       = 98
-	TagSmallTuple    = 104
-	TagLargeTuple    = 105
-	TagList          = 108
-	TagBinary        = 109
-	TagAtomUTF8      = 118
-	TagSmallAtomUTF8 = 119
-	TagETFVersion    = 131
+	TagSmallInteger   = 97
+	TagInteger        = 98
+	TagDeprecatedAtom = 100
+	TagSmallTuple     = 104
+	TagLargeTuple     = 105
+	TagList           = 108
+	TagBinary         = 109
+	TagAtomUTF8       = 118
+	TagSmallAtomUTF8  = 119
+	TagETFVersion     = 131
 )
 
 // Marshal serializes a term as a Bert structure

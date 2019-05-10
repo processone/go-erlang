@@ -28,3 +28,8 @@ func EncodeCall(module string, function string, args ...interface{}) (bytes.Buff
 	buf.Write(data)
 	return buf, err
 }
+
+// TODO: Use reader to read step by step from body
+func DecodeResponse(resp []byte, patterns []interface{}) (interface{}, error) {
+	return nil, nil
+}

@@ -30,5 +30,11 @@ func (c Client) Call(module string, function string, params ...interface{}) (int
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return body, err
+	}
+
+	//DecodeResponse(body)
+
 	return body, err
 }
