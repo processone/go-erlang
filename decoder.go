@@ -102,6 +102,10 @@ func decodeString(r io.Reader) (string, error) {
 		data, err := decodeString2(r)
 		return string(data), err
 
+	case TagBinary:
+		data, err := decodeString4(r)
+		return string(data), err
+
 	case TagSmallAtomUTF8:
 		// Length:
 		_, err = r.Read(byte1)
@@ -121,14 +125,41 @@ func decodeString(r io.Reader) (string, error) {
 		}
 		return string(data), nil
 
-	case TagBinary:
-		data, err := decodeString4(r)
-		return string(data), err
+	case TagList:
+		// Erlang does not encode utf8 charlist into a series of bytes, but use large integers.
+		// We need to process the integer list as runes.
+
+		// Count:
+		byte4 := make([]byte, 4)
+		n, err := r.Read(byte4)
+		if err != nil {
+			return "", err
+		}
+		if n < 4 {
+			return "", fmt.Errorf("truncated data")
+		}
+		count := int(binary.BigEndian.Uint32(byte4))
+
+		s := []rune("")
+		// Last element in list should be termination marker, so we loop (count - 1) times
+		for i := 1; i <= count; i++ {
+			// Assumption: We are decoding a into a string, so we expect all elements to be integers;
+			// We can fail otherwise.
+			char, err := decodeInt(r)
+			if err != nil {
+				return "", err
+			}
+			s = append(s, rune(char))
+		}
+		// TODO: Check that we have the list termination mark
+
+		return string(s), nil
 	}
 
 	return "", fmt.Errorf("incorrect type")
 }
 
+// Decode a string with length on 16 bits.
 func decodeString2(r io.Reader) ([]byte, error) {
 	// Length:
 	l := make([]byte, 2)
@@ -151,6 +182,7 @@ func decodeString2(r io.Reader) ([]byte, error) {
 	return data, nil
 }
 
+// Decode a string with length on 32 bits.
 func decodeString4(r io.Reader) ([]byte, error) {
 	// Length:
 	l := make([]byte, 4)
