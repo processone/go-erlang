@@ -48,7 +48,9 @@ func TestDecodeAtomToString(t *testing.T) {
 		input []byte
 		want  string
 	}{
+		{input: []byte{131, 100, 0, 0}, want: ""},
 		{input: []byte{131, 100, 0, 2, 111, 107}, want: "ok"},
+		{input: []byte{131, 119, 4, 240, 159, 150, 150}, want: "🖖"},
 	}
 
 	for _, tc := range tests {

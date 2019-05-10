@@ -97,6 +97,7 @@ func decodeString(r io.Reader) (string, error) {
 
 	// Compare expected type
 	switch int(byte1[0]) {
+
 	case TagDeprecatedAtom:
 		// Length:
 		l := make([]byte, 2)
@@ -113,9 +114,28 @@ func decodeString(r io.Reader) (string, error) {
 			return "", err
 		}
 		if n < length {
-			return "", fmt.Errorf("truncated deprecatedAtom")
+			return "", fmt.Errorf("truncated DeprecatedAtom")
 		}
 
+		return string(data), nil
+
+	case TagSmallAtomUTF8:
+		// Length:
+		_, err = r.Read(byte1)
+		if err != nil {
+			return "", err
+		}
+		length := int(byte1[0])
+
+		// Content:
+		data := make([]byte, length)
+		n, err := r.Read(data)
+		if err != nil {
+			return "", err
+		}
+		if n < length {
+			return "", fmt.Errorf("truncated SmallAtomUTF8")
+		}
 		return string(data), nil
 	}
 
