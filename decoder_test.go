@@ -44,8 +44,8 @@ func TestDecodeInt(t *testing.T) {
 	}
 }
 
-// TODO: Implement decodeAtom to []byte and bert.Atom
-func TestDecodeAtomToString(t *testing.T) {
+// TODO: Implement decode same types to []byte and bert.Atom
+func TestDecodeToString(t *testing.T) {
 	longUTF8 := strings.Repeat("🖖", 64)
 	tests := []struct {
 		input []byte
@@ -55,6 +55,9 @@ func TestDecodeAtomToString(t *testing.T) {
 		{input: []byte{131, 100, 0, 2, 111, 107}, want: "ok"},
 		{input: []byte{131, 119, 4, 240, 159, 150, 150}, want: "🖖"},
 		{input: append([]byte{131, 118, 1, 0}, []byte(longUTF8)...), want: longUTF8},
+		{input: []byte{131, 107, 0, 5, 72, 101, 108, 108, 111}, want: "Hello"},
+		//{input: []byte{131, 108, 0, 0, 0, 7, 98, 0, 1, 245, 150, 97, 32, 97, 72, 97, 101, 97,
+		//	108, 97, 108, 97, 111, 106}, want: "🖖 Hello"},
 	}
 
 	for _, tc := range tests {

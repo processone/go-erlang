@@ -45,6 +45,7 @@ const (
 	TagDeprecatedAtom = 100
 	TagSmallTuple     = 104
 	TagLargeTuple     = 105
+	TagString         = 107
 	TagList           = 108
 	TagBinary         = 109
 	TagAtomUTF8       = 118

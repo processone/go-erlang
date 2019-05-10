@@ -98,26 +98,9 @@ func decodeString(r io.Reader) (string, error) {
 	// Compare expected type
 	switch int(byte1[0]) {
 
-	case TagDeprecatedAtom:
-		// Length:
-		l := make([]byte, 2)
-		_, err = r.Read(l)
-		if err != nil {
-			return "", err
-		}
-		length := int(binary.BigEndian.Uint16(l))
-
-		// Content:
-		data := make([]byte, length)
-		n, err := r.Read(data)
-		if err != nil {
-			return "", err
-		}
-		if n < length {
-			return "", fmt.Errorf("truncated DeprecatedAtom")
-		}
-
-		return string(data), nil
+	case TagDeprecatedAtom, TagAtomUTF8, TagString:
+		data, err := decodeString2(r)
+		return string(data), err
 
 	case TagSmallAtomUTF8:
 		// Length:
@@ -138,27 +121,29 @@ func decodeString(r io.Reader) (string, error) {
 		}
 		return string(data), nil
 
-	case TagAtomUTF8:
-		// Length:
-		l := make([]byte, 2)
-		_, err = r.Read(l)
-		if err != nil {
-			return "", err
-		}
-		length := int(binary.BigEndian.Uint16(l))
-
-		// Content:
-		data := make([]byte, length)
-		n, err := r.Read(data)
-		if err != nil {
-			return "", err
-		}
-		if n < length {
-			return "", fmt.Errorf("truncated AtomUTF8ß")
-		}
-
-		return string(data), nil
 	}
 
 	return "", fmt.Errorf("incorrect type")
+}
+
+func decodeString2(r io.Reader) ([]byte, error) {
+	// Length:
+	l := make([]byte, 2)
+	_, err := r.Read(l)
+	if err != nil {
+		return []byte{}, err
+	}
+	length := int(binary.BigEndian.Uint16(l))
+
+	// Content:
+	data := make([]byte, length)
+	n, err := r.Read(data)
+	if err != nil {
+		return []byte{}, err
+	}
+	if n < length {
+		return []byte{}, fmt.Errorf("truncated data")
+	}
+
+	return data, nil
 }
