@@ -121,6 +121,9 @@ func decodeString(r io.Reader) (string, error) {
 		}
 		return string(data), nil
 
+	case TagBinary:
+		data, err := decodeString4(r)
+		return string(data), err
 	}
 
 	return "", fmt.Errorf("incorrect type")
@@ -134,6 +137,28 @@ func decodeString2(r io.Reader) ([]byte, error) {
 		return []byte{}, err
 	}
 	length := int(binary.BigEndian.Uint16(l))
+
+	// Content:
+	data := make([]byte, length)
+	n, err := r.Read(data)
+	if err != nil {
+		return []byte{}, err
+	}
+	if n < length {
+		return []byte{}, fmt.Errorf("truncated data")
+	}
+
+	return data, nil
+}
+
+func decodeString4(r io.Reader) ([]byte, error) {
+	// Length:
+	l := make([]byte, 4)
+	_, err := r.Read(l)
+	if err != nil {
+		return []byte{}, err
+	}
+	length := int(binary.BigEndian.Uint32(l))
 
 	// Content:
 	data := make([]byte, length)

@@ -56,6 +56,8 @@ func TestDecodeToString(t *testing.T) {
 		{input: []byte{131, 119, 4, 240, 159, 150, 150}, want: "🖖"},
 		{input: append([]byte{131, 118, 1, 0}, []byte(longUTF8)...), want: longUTF8},
 		{input: []byte{131, 107, 0, 5, 72, 101, 108, 108, 111}, want: "Hello"},
+		{input: []byte{131, 109, 0, 0, 0, 5, 72, 101, 108, 108, 111}, want: "Hello"},
+		{input: []byte{131, 109, 0, 0, 0, 10, 240, 159, 150, 150, 32, 72, 101, 108, 108, 111}, want: "🖖 Hello"},
 		//{input: []byte{131, 108, 0, 0, 0, 7, 98, 0, 1, 245, 150, 97, 32, 97, 72, 97, 101, 97,
 		//	108, 97, 108, 97, 111, 106}, want: "🖖 Hello"},
 	}
