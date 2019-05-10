@@ -2,6 +2,7 @@ package bert_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/processone/bert"
@@ -44,6 +45,7 @@ func TestDecodeInt(t *testing.T) {
 }
 
 func TestDecodeAtomToString(t *testing.T) {
+	longUTF8 := strings.Repeat("🖖", 64)
 	tests := []struct {
 		input []byte
 		want  string
@@ -51,6 +53,7 @@ func TestDecodeAtomToString(t *testing.T) {
 		{input: []byte{131, 100, 0, 0}, want: ""},
 		{input: []byte{131, 100, 0, 2, 111, 107}, want: "ok"},
 		{input: []byte{131, 119, 4, 240, 159, 150, 150}, want: "🖖"},
+		{input: append([]byte{131, 118, 1, 0}, []byte(longUTF8)...), want: longUTF8},
 	}
 
 	for _, tc := range tests {

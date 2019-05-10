@@ -22,7 +22,7 @@ func Decode(r io.Reader, term interface{}) error {
 		return err
 	}
 
-	// Read Erlang Term Format "magic byte1"
+	// Read Erlang Term Format "magic byte"
 	if byte1[0] != byte(TagETFVersion) {
 		// Bad Version tag (aka 'magic number')
 		return errors.New("incorrect Erlang Term version tag")
@@ -136,6 +136,27 @@ func decodeString(r io.Reader) (string, error) {
 		if n < length {
 			return "", fmt.Errorf("truncated SmallAtomUTF8")
 		}
+		return string(data), nil
+
+	case TagAtomUTF8:
+		// Length:
+		l := make([]byte, 2)
+		_, err = r.Read(l)
+		if err != nil {
+			return "", err
+		}
+		length := int(binary.BigEndian.Uint16(l))
+
+		// Content:
+		data := make([]byte, length)
+		n, err := r.Read(data)
+		if err != nil {
+			return "", err
+		}
+		if n < length {
+			return "", fmt.Errorf("truncated AtomUTF8ß")
+		}
+
 		return string(data), nil
 	}
 
