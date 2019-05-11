@@ -1,4 +1,15 @@
-# BERT and BERT-RPC library for Go
+# Go-Erlang
+
+Go-Erlang is a set of package for Go <-> Erlang interoperability.
+
+The core of the library is the Erlang External Term Format. It is the internal format data to exchange Erlang terms 
+over the network. It is for example used in Erlang distribution protocol.
+
+## Installation
+
+## Usage
+
+## BERT and BERT-RPC library for Go
 
 BERT library for Go is designed for simple data exchange between Go and Erlang/Elixir applications.
 
@@ -14,17 +25,13 @@ Here are the important points to note:
 - This version implements the type I needed in Erlang External Term Format for interop with
   [ejabberd](https://github.com/processone/ejabberd/)
   
-## Why use BERT?
+### Why use BERT?
 
 If you want to exchange data with Erlang node, it is handy to use a format that support all the Erlang types, including
 atoms. Without having the concept of atoms explicitly in the data exchange protocol, you end up adding wrapper tuples
 and conversions on the Erlang side that become very painful.
 
-If you do not need to interop with Erlang, we would recommand using Protobuf or MsgPack.
-
-## Installation
-
-## Usage
+If you do not need to interop with Erlang, we would recommend using Protobuf or MsgPack.
 
 ## TODO
 
