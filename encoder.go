@@ -45,6 +45,7 @@ const (
 	TagDeprecatedAtom = 100
 	TagSmallTuple     = 104
 	TagLargeTuple     = 105
+	TagNil            = 106
 	TagString         = 107
 	TagList           = 108
 	TagBinary         = 109
@@ -206,7 +207,7 @@ func encodeList(buf *bytes.Buffer, list []interface{}) error {
 		}
 	}
 	// nil terminates the list:
-	buf.Write([]byte{106})
+	buf.Write([]byte{TagNil})
 	return err
 }
 

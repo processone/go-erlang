@@ -126,8 +126,6 @@ func decodeString(r io.Reader) (string, error) {
 		return string(data), nil
 
 	case TagList:
-		// Erlang does not encode utf8 charlist into a series of bytes, but use large integers.
-		// We need to process the integer list as runes.
 
 		// Count:
 		byte4 := make([]byte, 4)
@@ -149,9 +147,14 @@ func decodeString(r io.Reader) (string, error) {
 			if err != nil {
 				return "", err
 			}
+			// Erlang does not encode utf8 charlist into a series of bytes, but use large integers.
+			// We need to process the integer list as runes.
 			s = append(s, rune(char))
 		}
 		// TODO: Check that we have the list termination mark
+		if err := decodeNil(r); err != nil {
+			return string(s), err
+		}
 
 		return string(s), nil
 	}
@@ -203,4 +206,20 @@ func decodeString4(r io.Reader) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// Read a nil value and return error in case of unexpected value.
+// Nil is expected as a marker for end of lists.
+func decodeNil(r io.Reader) error {
+	byte1 := make([]byte, 1)
+	_, err := r.Read(byte1)
+	if err != nil {
+		return err
+	}
+
+	if byte1[0] != byte(TagNil) {
+		return fmt.Errorf("could not find nil: %d", byte1[0])
+	}
+
+	return nil
 }
