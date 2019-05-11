@@ -32,6 +32,7 @@ func Decode(r io.Reader, term interface{}) error {
 	return decodeData(r, term)
 }
 
+// TODO ignore unexported fields
 func decodeData(r io.Reader, term interface{}) error {
 	byte1 := make([]byte, 1)
 	// TODO: Test against valueof as Ptr
@@ -86,7 +87,7 @@ func decodeData(r io.Reader, term interface{}) error {
 		}
 		// If the tuple does not contain the expected number of fields in our struct
 		if length != val.NumField() {
-			return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
+			return fmt.Errorf("cannot decode tuple of length %d to struct", length)
 		}
 
 		// For each field, try to decode it recursively
