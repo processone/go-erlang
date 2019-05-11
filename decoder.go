@@ -8,9 +8,10 @@ import (
 	"reflect"
 )
 
-func Decode2(r io.Reader, val interface{}) error {
-	return nil
-}
+/*
+TODO: Change the approach ? Fully decode the structure recursively and try to map it to the target type.
+   It might help handle more complex structure, with several level of embedded structure.
+*/
 
 var ErrRange = errors.New("value out of range")
 
@@ -28,6 +29,11 @@ func Decode(r io.Reader, term interface{}) error {
 		return errors.New("incorrect Erlang Term version tag")
 	}
 
+	return decodeData(r, term)
+}
+
+func decodeData(r io.Reader, term interface{}) error {
+	byte1 := make([]byte, 1)
 	// TODO: Test against valueof as Ptr
 	val := reflect.ValueOf(term).Elem()
 	switch val.Kind() {
@@ -45,6 +51,60 @@ func Decode(r io.Reader, term interface{}) error {
 			val.SetString(s)
 		}
 		return err
+
+	case reflect.Struct:
+		// For now we assume the structure and Erlang type is composed only of basic types
+		// TODO: Match special struct to support common Erlang response pattern (like: ok | {error, Reason})
+		// 1. Get the Erlang type of the structure:
+		_, err := r.Read(byte1)
+		if err != nil {
+			return err
+		}
+
+		// 2. Check that this is a tuple of same length
+		length := 0
+		switch int(byte1[0]) {
+		case TagSmallTuple:
+			_, err := r.Read(byte1)
+			if err != nil {
+				return err
+			}
+			length = int(byte1[0])
+		case TagLargeTuple:
+			byte4 := make([]byte, 4)
+			n, err := r.Read(byte4)
+			if err != nil {
+				return err
+			}
+			if n < 4 {
+				return fmt.Errorf("truncated data")
+			}
+			length = int(binary.BigEndian.Uint32(byte4))
+
+		default:
+			return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
+		}
+		// If the tuple does not contain the expected number of fields in our struct
+		if length != val.NumField() {
+			return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
+		}
+
+		// For each field, try to decode it recursively
+		for i := 0; i < length; i++ {
+			valueField := val.Field(i)
+			//typeField := val.Type().Field(i)
+			if valueField.Kind() == reflect.Ptr {
+				valueField = valueField.Elem()
+			}
+			if valueField.CanAddr() {
+				err = decodeData(r, valueField.Addr().Interface())
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
 	default:
 		return fmt.Errorf("unhandled decoding target")
 	}
@@ -211,6 +271,7 @@ func decodeString4(r io.Reader) ([]byte, error) {
 // Read a nil value and return error in case of unexpected value.
 // Nil is expected as a marker for end of lists.
 func decodeNil(r io.Reader) error {
+	// Read Tag
 	byte1 := make([]byte, 1)
 	_, err := r.Read(byte1)
 	if err != nil {

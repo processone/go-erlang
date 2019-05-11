@@ -74,3 +74,42 @@ func TestDecodeToString(t *testing.T) {
 		}
 	}
 }
+
+func TestDecodeEmptyTuple(t *testing.T) {
+	input := []byte{131, 104, 0}
+	want := struct{}{}
+
+	var tuple struct{}
+	buf := bytes.NewBuffer(input)
+	if err := bert.Decode(buf, &tuple); err != nil {
+		t.Errorf("cannot decode Erlang term: %s", err)
+		return
+	}
+
+	if tuple != want {
+		t.Errorf("cannot decode empty tuple: %v", tuple)
+	}
+}
+
+func TestDecodeTuple2(t *testing.T) {
+	input := []byte{131, 104, 2, 100, 0, 5, 101, 114, 114, 111, 114, 100, 0, 9, 110, 111,
+		116, 95, 102, 111, 117, 110, 100}
+	want := struct {
+		Result string
+		Reason string
+	}{"error", "not_found"}
+
+	var tuple struct {
+		Result string
+		Reason string
+	}
+	buf := bytes.NewBuffer(input)
+	if err := bert.Decode(buf, &tuple); err != nil {
+		t.Errorf("cannot decode Erlang term: %s", err)
+		return
+	}
+
+	if tuple != want {
+		t.Errorf("cannot decode empty tuple: %v", tuple)
+	}
+}
