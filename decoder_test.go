@@ -128,3 +128,40 @@ func TestFailOnLengthMismatch(t *testing.T) {
 		t.Errorf("decoding tuple into struct with different number of field should fail")
 	}
 }
+
+func TestDecodeOkResult(t *testing.T) {
+	tests := []struct {
+		input  []byte
+		want   bert.FunctionResult
+		result string
+	}{
+		{input: []byte{131, 100, 0, 2, 111, 107}, want: bert.FunctionResult{Success: true}},
+		{input: []byte{131, 100, 0, 5, 101, 114, 114, 111, 114}, want: bert.FunctionResult{Err: bert.ErrReturn}},
+		{input: []byte{131, 100, 0, 4, 105, 110, 102, 111}, want: bert.FunctionResult{}, result: "info"},
+	}
+
+	for _, tc := range tests {
+		var myString string
+		res := bert.FunctionResult{Result: &myString}
+		buf := bytes.NewBuffer(tc.input)
+
+		if err := bert.Decode(buf, &res); err != nil {
+			t.Errorf("cannot decode function call result: %s", err)
+			return
+		}
+
+		if tc.want.Success == true && !res.Success {
+			t.Errorf("incorrect decoded value: Success is not true")
+			continue
+		}
+
+		if tc.want.Err != nil && tc.want.Err != res.Err {
+			t.Errorf("incorrect decoded value: wrong error: %s (!= %s)", res.Err, tc.want.Err)
+			continue
+		}
+
+		if myString != tc.result {
+			t.Errorf("incorrect decoded value: %#v. expected: %#v", myString, tc.result)
+		}
+	}
+}

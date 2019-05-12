@@ -1,6 +1,7 @@
 package bert
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -14,6 +15,28 @@ TODO: Change the approach ? Fully decode the structure recursively and try to ma
 */
 
 var ErrRange = errors.New("value out of range")
+var ErrReturn = errors.New("function returns 'error'")
+
+/*
+Special type to decode function call returns.
+
+In general, a function call in Erlang returns one of the following structure:
+- ok
+- error
+- {ok, Result}
+- {error, Reason}
+- Result
+
+It could also throw an error to end in error.
+
+This special type is used to be able to map it with Go convention, either
+getting a valid result or an error.
+*/
+type FunctionResult struct {
+	Success bool
+	Err     error
+	Result  interface{}
+}
 
 // TODO: Decode alternatives responses allow passing extra val as ...
 func Decode(r io.Reader, term interface{}) error {
@@ -34,10 +57,10 @@ func Decode(r io.Reader, term interface{}) error {
 
 // TODO ignore unexported fields
 func decodeData(r io.Reader, term interface{}) error {
-	byte1 := make([]byte, 1)
-	// TODO: Test against valueof as Ptr
+	// TODO: Test against valueof as not a Ptr
 	val := reflect.ValueOf(term).Elem()
 	switch val.Kind() {
+
 	case reflect.Int8:
 		return ErrRange
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -52,63 +75,145 @@ func decodeData(r io.Reader, term interface{}) error {
 			val.SetString(s)
 		}
 		return err
-
 	case reflect.Struct:
-		// For now we assume the structure and Erlang type is composed only of basic types
-		// TODO: Match special struct to support common Erlang response pattern (like: ok | {error, Reason})
-		// 1. Get the Erlang type of the structure:
+		// Check if we are trying to get a function call return (special FunctionCall struct)
+		if val.Type().Name() == "FunctionResult" {
+			return decodeFunctionResult(r, val)
+		}
+		// Otherwise, decode directly to user-defined struct
+		return decodeStruct(r, val)
+
+	default:
+		return fmt.Errorf("unhandled decoding target")
+	}
+}
+
+func decodeStruct(r io.Reader, val reflect.Value) error {
+	// For now we assume the structure and Erlang type is composed only of basic types
+	// 1. Get the Erlang type of the structure:
+	byte1 := make([]byte, 1)
+	_, err := r.Read(byte1)
+	if err != nil {
+		return err
+	}
+
+	// 2. Check that this is a tuple of same length
+	length := 0
+	switch int(byte1[0]) {
+	case TagSmallTuple:
 		_, err := r.Read(byte1)
 		if err != nil {
 			return err
 		}
-
-		// 2. Check that this is a tuple of same length
-		length := 0
-		switch int(byte1[0]) {
-		case TagSmallTuple:
-			_, err := r.Read(byte1)
-			if err != nil {
-				return err
-			}
-			length = int(byte1[0])
-		case TagLargeTuple:
-			byte4 := make([]byte, 4)
-			n, err := r.Read(byte4)
-			if err != nil {
-				return err
-			}
-			if n < 4 {
-				return fmt.Errorf("truncated data")
-			}
-			length = int(binary.BigEndian.Uint32(byte4))
-
-		default:
-			return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
+		length = int(byte1[0])
+	case TagLargeTuple:
+		byte4 := make([]byte, 4)
+		n, err := r.Read(byte4)
+		if err != nil {
+			return err
 		}
-		// If the tuple does not contain the expected number of fields in our struct
-		if length != val.NumField() {
-			return fmt.Errorf("cannot decode tuple of length %d to struct", length)
+		if n < 4 {
+			return fmt.Errorf("truncated data")
 		}
+		length = int(binary.BigEndian.Uint32(byte4))
 
-		// For each field, try to decode it recursively
-		for i := 0; i < length; i++ {
-			valueField := val.Field(i)
-			//typeField := val.Type().Field(i)
-			if valueField.Kind() == reflect.Ptr {
-				valueField = valueField.Elem()
-			}
-			if valueField.CanAddr() {
-				err = decodeData(r, valueField.Addr().Interface())
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
 	default:
-		return fmt.Errorf("unhandled decoding target")
+		return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
 	}
+	// If the tuple does not contain the expected number of fields in our struct
+	if length != val.NumField() {
+		return fmt.Errorf("cannot decode tuple of length %d to struct", length)
+	}
+
+	// For each field, try to decode it recursively
+	for i := 0; i < length; i++ {
+		valueField := val.Field(i)
+		if valueField.Kind() == reflect.Ptr {
+			valueField = valueField.Elem()
+		}
+		if valueField.CanAddr() {
+			err = decodeData(r, valueField.Addr().Interface())
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func decodeFunctionResult(r io.Reader, val reflect.Value) error {
+	// Read the type of data
+	byte1 := make([]byte, 1)
+	_, err := r.Read(byte1)
+	if err != nil {
+		return err
+	}
+
+	tupleLength := 0
+	switch int(byte1[0]) {
+
+	// ========================================================================
+	// Function return is an atom
+	case TagDeprecatedAtom, TagAtomUTF8:
+		data, err := decodeString2(r)
+		if err != nil {
+			return err
+		}
+
+		// return is ok => Success = true
+		if bytes.Compare(data, []byte{111, 107}) == 0 {
+			valueField := val.FieldByName("Success")
+			valueField.SetBool(true)
+			return nil
+		}
+
+		// return is error => Set error to generic value
+		if bytes.Compare(data, []byte{101, 114, 114, 111, 114}) == 0 {
+			valueField := val.FieldByName("Err")
+			valueField.Set(reflect.ValueOf(ErrReturn))
+			return nil
+		}
+
+		// return is not atom or or error. If the expect result is a string, we consider the return the result.
+		// TODO: Make more generic
+		valueField := val.FieldByName("Result")
+		embeddedVal := valueField.Interface()
+		nv := reflect.ValueOf(embeddedVal).Elem()
+		if nv.Kind() == reflect.String {
+			nv.SetString(string(data))
+			return nil
+		}
+		// Otherwise we fail.
+
+		return fmt.Errorf("unexpected result type in FunctionResult")
+
+	// ========================================================================
+	// Function return is a tuple
+	case TagSmallTuple:
+		_, err := r.Read(byte1)
+		if err != nil {
+			return err
+		}
+		tupleLength = int(byte1[0])
+	case TagLargeTuple:
+		byte4 := make([]byte, 4)
+		n, err := r.Read(byte4)
+		if err != nil {
+			return err
+		}
+		if n < 4 {
+			return fmt.Errorf("truncated data")
+		}
+		tupleLength = int(binary.BigEndian.Uint32(byte4))
+
+	default:
+		return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
+	}
+
+	// Decode tuple. If tuple if of length 2, check if it is either {ok, Result} or {error, Reason}.
+	// Otherwise, consider it to be the result.
+
+	fmt.Println(tupleLength)
 	return nil
 }
 
@@ -195,7 +300,7 @@ func decodeString(r io.Reader) (string, error) {
 			return "", err
 		}
 		if n < 4 {
-			return "", fmt.Errorf("truncated data")
+			return "", fmt.Errorf("truncated List data")
 		}
 		count := int(binary.BigEndian.Uint32(byte4))
 
