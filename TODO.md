@@ -10,3 +10,4 @@
 - Add Server example.
 - Performance optimization.
 - Support new error package (Go 2).
+- Test and handle Erlang exceptions in function calls.
