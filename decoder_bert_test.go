@@ -23,7 +23,7 @@ func TestDecodeErrorReply(t *testing.T) {
 	}
 
 	if err.Error() != "exists" {
-		t.Errorf("bert decoding should have returned error with reason 'exists'")
+		t.Errorf("bert decoding should have returned error with reason 'exists': %s", err.Error())
 	}
 }
 

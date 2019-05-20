@@ -164,7 +164,7 @@ func TestDecodeResult(t *testing.T) {
 				return
 			}
 
-			if tc.want.Err != nil && tc.want.Err != res.Err {
+			if tc.want.Err != nil && tc.want.Err.Error() != res.Err.Error() {
 				st.Errorf("incorrect decoded value: wrong error: %v (!= %v)", res.Err, tc.want.Err)
 				return
 			}

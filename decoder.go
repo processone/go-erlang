@@ -140,7 +140,6 @@ func decodeStructElts(r io.Reader, length int, val reflect.Value) error {
 			valueField = valueField.Elem()
 		}
 		if valueField.CanAddr() {
-			fmt.Println(valueField.Kind())
 			err := decodeData(r, valueField.Addr().Interface())
 			if err != nil {
 				return err
@@ -247,10 +246,10 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 			valueField := val.FieldByName("Err")
 			reason := errors.New(el2)
 			valueField.Set(reflect.ValueOf(reason))
+			return nil
 		case "ok":
 			valueField := val.FieldByName("Result")
 			embeddedVal := valueField.Interface()
-			//nv := reflect.ValueOf(embeddedVal).Elem()
 			if err = decodeData(r, embeddedVal); err != nil {
 				return err
 			}

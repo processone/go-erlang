@@ -54,7 +54,6 @@ func DecodeReply(r io.Reader, term interface{}) error {
 		// Read the result of the function call
 		res := FunctionResult{Result: term}
 		if err := decodeData(r, &res); err != nil {
-			fmt.Println("MREMOND err 1: ", err)
 			return err
 		}
 		if res.Err != nil {
