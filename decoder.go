@@ -57,7 +57,11 @@ func Decode(r io.Reader, term interface{}) error {
 // TODO ignore unexported fields
 func decodeData(r io.Reader, term interface{}) error {
 	// TODO: Test against valueof as not a Ptr
-	val := reflect.ValueOf(term).Elem()
+	val := reflect.ValueOf(term)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
 	switch val.Kind() {
 
 	case reflect.Int8:
@@ -76,6 +80,7 @@ func decodeData(r io.Reader, term interface{}) error {
 		return err
 	case reflect.Struct:
 		// Check if we are trying to get a function call return (special FunctionCall struct)
+		fmt.Println("MREMOND Name: ", val.Type().Name())
 		if val.Type().Name() == "FunctionResult" {
 			return decodeFunctionResult(r, val)
 		}
@@ -244,12 +249,17 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 			reason := errors.New(el2)
 			valueField.Set(reflect.ValueOf(reason))
 		case "ok":
-			resultVal := val.FieldByName("Result")
-			embeddedVal := resultVal.Interface()
-			nv := reflect.ValueOf(embeddedVal).Elem()
-			return decodeStructElts(r, tupleLength, nv)
+			valueField := val.FieldByName("Result")
+			embeddedVal := valueField.Interface()
+			//nv := reflect.ValueOf(embeddedVal).Elem()
+			if err = decodeData(r, embeddedVal); err != nil {
+				return err
+			}
+			valueField = val.FieldByName("Success")
+			valueField.SetBool(true)
+			return nil
 		}
-		return nil
+		return fmt.Errorf("tuple of length 2 are expected to be {ok, Result} or {error, Reason}")
 	}
 
 	// The tuple is not of length = 2. This is directly the result we expect:
