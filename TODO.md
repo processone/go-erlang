@@ -12,6 +12,7 @@
 - Performance optimization.
 - Support new error package (Go 2).
 - Test and handle Erlang exceptions in function calls.
+- Give the ability to test against protocol error vs Erlang returned errors.
 
 ## Examples
 
