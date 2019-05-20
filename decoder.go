@@ -80,7 +80,6 @@ func decodeData(r io.Reader, term interface{}) error {
 		return err
 	case reflect.Struct:
 		// Check if we are trying to get a function call return (special FunctionCall struct)
-		fmt.Println("MREMOND Name: ", val.Type().Name())
 		if val.Type().Name() == "FunctionResult" {
 			return decodeFunctionResult(r, val)
 		}
