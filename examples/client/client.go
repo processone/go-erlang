@@ -2,16 +2,18 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/processone/bert"
 )
 
 func main() {
 	svc := bert.New("http://localhost:5281/rpc/")
-	body, _ := svc.Call("ejabberd_auth", "try_register",
-		"john", "localhost", "password")
-	fmt.Println(body)
+	c := svc.NewCall("ejabberd_auth", "try_register", "john", "localhost", "password")
+	err := svc.Exec(c, nil)
+	if err != nil {
+		log.Fatal("could not create user: ", err)
+	}
 }
 
 /*

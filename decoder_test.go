@@ -2,6 +2,7 @@ package bert_test
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -130,39 +131,76 @@ func TestFailOnLengthMismatch(t *testing.T) {
 	}
 }
 
-func TestDecodeOkResult(t *testing.T) {
+func TestDecodeResult(t *testing.T) {
 	tests := []struct {
+		name   string
 		input  []byte
 		want   bert.FunctionResult
 		result string
 	}{
-		{input: []byte{131, 100, 0, 2, 111, 107}, want: bert.FunctionResult{Success: true}},
-		{input: []byte{131, 100, 0, 5, 101, 114, 114, 111, 114}, want: bert.FunctionResult{Err: bert.ErrReturn}},
-		{input: []byte{131, 100, 0, 4, 105, 110, 102, 111}, want: bert.FunctionResult{}, result: "info"},
+		// Erlang function returns:
+		{name: "ok", input: []byte{131, 100, 0, 2, 111, 107}, want: bert.FunctionResult{Success: true}},
+		{name: "error", input: []byte{131, 100, 0, 5, 101, 114, 114, 111, 114}, want: bert.FunctionResult{Err: bert.ErrReturn}},
+		{name: "atom result", input: []byte{131, 100, 0, 4, 105, 110, 102, 111}, want: bert.FunctionResult{}, result: "info"},
+		{name: "{ok, Result}", input: []byte{131, 104, 2, 100, 0, 2, 111, 107, 100, 0, 5, 102, 111, 117, 110, 100},
+			want: bert.FunctionResult{Success: true}, result: "found"},
+		{name: "{error, Reason}", input: []byte{131, 104, 2, 100, 0, 5, 101, 114, 114, 111, 114, 100, 0, 9, 110, 111, 116, 95,
+			102, 111, 117, 110, 100}, want: bert.FunctionResult{Err: errors.New("not_found")}},
 	}
 
 	for _, tc := range tests {
-		var myString string
-		res := bert.FunctionResult{Result: &myString}
-		buf := bytes.NewBuffer(tc.input)
+		t.Run(tc.name, func(st *testing.T) {
+			var myString string
+			res := bert.FunctionResult{Result: &myString}
+			buf := bytes.NewBuffer(tc.input)
 
-		if err := bert.Decode(buf, &res); err != nil {
-			t.Errorf("cannot decode function call result: %s", err)
-			return
-		}
+			if err := bert.Decode(buf, &res); err != nil {
+				st.Errorf("cannot decode function call result: %s", err)
+				return
+			}
 
-		if tc.want.Success == true && !res.Success {
-			t.Errorf("incorrect decoded value: Success is not true")
-			continue
-		}
+			if tc.want.Success == true && !res.Success {
+				st.Errorf("incorrect decoded value: Success is not true")
+				return
+			}
 
-		if tc.want.Err != nil && tc.want.Err != res.Err {
-			t.Errorf("incorrect decoded value: wrong error: %s (!= %s)", res.Err, tc.want.Err)
-			continue
-		}
+			if tc.want.Err != nil && tc.want.Err != res.Err {
+				st.Errorf("incorrect decoded value: wrong error: %v (!= %v)", res.Err, tc.want.Err)
+				return
+			}
 
-		if myString != tc.result {
-			t.Errorf("incorrect decoded value: %#v. expected: %#v", myString, tc.result)
-		}
+			if myString != tc.result {
+				st.Errorf("incorrect decoded value: %#v. expected: %#v", myString, tc.result)
+			}
+		})
 	}
+}
+
+func TestDecodeTupleResult(t *testing.T) {
+	input := []byte{131, 104, 4, 97, 1, 97, 2, 97, 3, 97, 4}
+	want := struct {
+		A int
+		B int
+		C int
+		D int
+	}{1, 2, 3, 4}
+
+	var tuple struct {
+		A int
+		B int
+		C int
+		D int
+	}
+	res := bert.FunctionResult{Result: &tuple}
+	buf := bytes.NewBuffer(input)
+
+	if err := bert.Decode(buf, &res); err != nil {
+		t.Errorf("cannot decode Erlang term: %s", err)
+		return
+	}
+
+	if tuple != want {
+		t.Errorf("result does not match expectation: %v", tuple)
+	}
+
 }

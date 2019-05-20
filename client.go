@@ -1,7 +1,6 @@
 package bert
 
 import (
-	"io/ioutil"
 	"net/http"
 )
 
@@ -15,26 +14,38 @@ func New(endpoint string) Client {
 	return client
 }
 
-func (c Client) Call(module string, function string, params ...interface{}) (interface{}, error) {
+type call struct {
+	module   string
+	function string
+	args     []interface{}
+}
+
+func (Client) NewCall(module string, function string, args ...interface{}) call {
+	return call{module: module, function: function, args: args}
+}
+
+func (c Client) Exec(call call, result interface{}) error {
 	// Prepare BERT-RPC Packet
-	buf, err := EncodeCall(module, function, params...)
+	buf, err := EncodeCall(call.module, call.function, call.args...)
+
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Post BERT-RPC call to HTTP endpoint
 	resp, err := http.Post(c.Endpoint, "application/bert", &buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return body, err
-	}
 
-	//DecodeResponse(body)
+	/*
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		fmt.Println(body)
+	*/
 
-	return body, err
+	return DecodeReply(resp.Body, nil)
 }

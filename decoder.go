@@ -38,7 +38,6 @@ type FunctionResult struct {
 	Result  interface{}
 }
 
-// TODO: Decode alternatives responses allow passing extra val as ...
 func Decode(r io.Reader, term interface{}) error {
 	byte1 := make([]byte, 1)
 	_, err := r.Read(byte1)
@@ -49,7 +48,7 @@ func Decode(r io.Reader, term interface{}) error {
 	// Read Erlang Term Format "magic byte"
 	if byte1[0] != byte(TagETFVersion) {
 		// Bad Version tag (aka 'magic number')
-		return errors.New("incorrect Erlang Term version tag")
+		return fmt.Errorf("incorrect Erlang Term version tag: %d", byte1[0])
 	}
 
 	return decodeData(r, term)
@@ -84,7 +83,7 @@ func decodeData(r io.Reader, term interface{}) error {
 		return decodeStruct(r, val)
 
 	default:
-		return fmt.Errorf("unhandled decoding target")
+		return fmt.Errorf("unhandled decoding target: %s", val.Kind())
 	}
 }
 
@@ -120,6 +119,11 @@ func decodeStruct(r io.Reader, val reflect.Value) error {
 	default:
 		return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
 	}
+
+	return decodeStructElts(r, length, val)
+}
+
+func decodeStructElts(r io.Reader, length int, val reflect.Value) error {
 	// If the tuple does not contain the expected number of fields in our struct
 	if length != val.NumField() {
 		return fmt.Errorf("cannot decode tuple of length %d to struct", length)
@@ -132,7 +136,8 @@ func decodeStruct(r io.Reader, val reflect.Value) error {
 			valueField = valueField.Elem()
 		}
 		if valueField.CanAddr() {
-			err = decodeData(r, valueField.Addr().Interface())
+			fmt.Println(valueField.Kind())
+			err := decodeData(r, valueField.Addr().Interface())
 			if err != nil {
 				return err
 			}
@@ -140,6 +145,9 @@ func decodeStruct(r io.Reader, val reflect.Value) error {
 	}
 	return nil
 }
+
+var AtomOK = []byte{111, 107}
+var AtomError = []byte{101, 114, 114, 111, 114}
 
 func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 	// Read the type of data
@@ -153,7 +161,7 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 	switch int(byte1[0]) {
 
 	// ========================================================================
-	// Function return is an atom
+	// Function return is an atom. It can be either ok, error or a result atom
 	case TagDeprecatedAtom, TagAtomUTF8:
 		data, err := decodeString2(r)
 		if err != nil {
@@ -161,14 +169,14 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 		}
 
 		// return is ok => Success = true
-		if bytes.Compare(data, []byte{111, 107}) == 0 {
+		if bytes.Compare(data, AtomOK) == 0 {
 			valueField := val.FieldByName("Success")
 			valueField.SetBool(true)
 			return nil
 		}
 
 		// return is error => Set error to generic value
-		if bytes.Compare(data, []byte{101, 114, 114, 111, 114}) == 0 {
+		if bytes.Compare(data, AtomError) == 0 {
 			valueField := val.FieldByName("Err")
 			valueField.Set(reflect.ValueOf(ErrReturn))
 			return nil
@@ -186,6 +194,9 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 		// Otherwise we fail.
 
 		return fmt.Errorf("unexpected result type in FunctionResult")
+
+		// TODO: Decode SmallAtomUTF8
+		// ...
 
 	// ========================================================================
 	// Function return is a tuple
@@ -210,11 +221,42 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 		return fmt.Errorf("cannot decode type %d to struct", int(byte1[0]))
 	}
 
-	// Decode tuple. If tuple if of length 2, check if it is either {ok, Result} or {error, Reason}.
-	// Otherwise, consider it to be the result.
+	// Decode tuple
+	// If tuple is of length 2, we assume it is either {ok, Result} or {error, Reason}
+	if tupleLength == 2 {
+		// We would need to decode first element and check against ok or error. If we have one of them, we assume
+		// second element is error reason or result.
 
-	fmt.Println(tupleLength)
-	return nil
+		// Read first element, assuming this is either ok or error
+		el1, err := decodeString(r)
+		if err != nil {
+			return err
+		}
+
+		switch el1 {
+		case "error":
+			el2, err := decodeString(r)
+			if err != nil {
+				return err
+			}
+
+			valueField := val.FieldByName("Err")
+			reason := errors.New(el2)
+			valueField.Set(reflect.ValueOf(reason))
+		case "ok":
+			resultVal := val.FieldByName("Result")
+			embeddedVal := resultVal.Interface()
+			nv := reflect.ValueOf(embeddedVal).Elem()
+			return decodeStructElts(r, tupleLength, nv)
+		}
+		return nil
+	}
+
+	// The tuple is not of length = 2. This is directly the result we expect:
+	resultVal := val.FieldByName("Result")
+	embeddedVal := resultVal.Interface()
+	nv := reflect.ValueOf(embeddedVal).Elem()
+	return decodeStructElts(r, tupleLength, nv)
 }
 
 // TODO: Pass bitsize here to trigger overflow operations errors
@@ -252,7 +294,7 @@ func decodeInt(r io.Reader) (int64, error) {
 	return 0, fmt.Errorf("incorrect type")
 }
 
-// We can decode several Erlang type in a string: Atom (Deprecated), AtomUTF8, Binary, CharList.
+// We can decode several Erlang types in a string: Atom (Deprecated), AtomUTF8, Binary, CharList.
 func decodeString(r io.Reader) (string, error) {
 	// Read Tag
 	byte1 := make([]byte, 1)
@@ -262,7 +304,12 @@ func decodeString(r io.Reader) (string, error) {
 	}
 
 	// Compare expected type
-	switch int(byte1[0]) {
+	dataType := int(byte1[0])
+	switch dataType {
+
+	case TagSmallAtomUTF8:
+		data, err := decodeString1(r)
+		return string(data), err
 
 	case TagDeprecatedAtom, TagAtomUTF8, TagString:
 		data, err := decodeString2(r)
@@ -271,25 +318,6 @@ func decodeString(r io.Reader) (string, error) {
 	case TagBinary:
 		data, err := decodeString4(r)
 		return string(data), err
-
-	case TagSmallAtomUTF8:
-		// Length:
-		_, err = r.Read(byte1)
-		if err != nil {
-			return "", err
-		}
-		length := int(byte1[0])
-
-		// Content:
-		data := make([]byte, length)
-		n, err := r.Read(data)
-		if err != nil {
-			return "", err
-		}
-		if n < length {
-			return "", fmt.Errorf("truncated SmallAtomUTF8")
-		}
-		return string(data), nil
 
 	case TagList:
 
@@ -325,7 +353,29 @@ func decodeString(r io.Reader) (string, error) {
 		return string(s), nil
 	}
 
-	return "", fmt.Errorf("incorrect type")
+	return "", fmt.Errorf("incorrect type: %d", dataType)
+}
+
+func decodeString1(r io.Reader) ([]byte, error) {
+	// Length:
+	byte1 := make([]byte, 1)
+	_, err := r.Read(byte1)
+	if err != nil {
+		return []byte{}, err
+	}
+	length := int(byte1[0])
+
+	// Content:
+	data := make([]byte, length)
+	n, err := r.Read(data)
+	if err != nil && err != io.EOF {
+		return []byte{}, err
+	}
+	if n < length {
+		return []byte{}, fmt.Errorf("truncated data")
+	}
+	return data, nil
+
 }
 
 // Decode a string with length on 16 bits.
@@ -341,7 +391,7 @@ func decodeString2(r io.Reader) ([]byte, error) {
 	// Content:
 	data := make([]byte, length)
 	n, err := r.Read(data)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return []byte{}, err
 	}
 	if n < length {
@@ -364,7 +414,7 @@ func decodeString4(r io.Reader) ([]byte, error) {
 	// Content:
 	data := make([]byte, length)
 	n, err := r.Read(data)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return []byte{}, err
 	}
 	if n < length {
