@@ -10,6 +10,7 @@ import (
 // A Bert call reply is either:
 // {reply, Result}
 // {error, {Type, Code, Class, Detail, Backtrace}}
+// If the term passed to the function is nil, we will not try to decode the function return.
 func DecodeReply(r io.Reader, term interface{}) error {
 	// 1. Read BERP length
 	byte4 := make([]byte, 4)

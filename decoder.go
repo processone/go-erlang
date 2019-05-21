@@ -56,7 +56,7 @@ func Decode(r io.Reader, term interface{}) error {
 
 // TODO ignore unexported fields
 func decodeData(r io.Reader, term interface{}) error {
-	// TODO: Test against valueof as not a Ptr
+	// Resolve pointers
 	val := reflect.ValueOf(term)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
@@ -250,9 +250,15 @@ func decodeFunctionResult(r io.Reader, val reflect.Value) error {
 		case "ok":
 			valueField := val.FieldByName("Result")
 			embeddedVal := valueField.Interface()
-			if err = decodeData(r, embeddedVal); err != nil {
-				return err
+
+			// If embeddedVal is nil, is mean that developer does not care about the data returned,
+			// so we only decoded them if the value is not nil
+			if embeddedVal != nil {
+				if err = decodeData(r, embeddedVal); err != nil {
+					return err
+				}
 			}
+
 			valueField = val.FieldByName("Success")
 			valueField.SetBool(true)
 			return nil
