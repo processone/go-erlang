@@ -47,5 +47,5 @@ func (c Client) Exec(call call, result interface{}) error {
 		fmt.Println(body)
 	*/
 
-	return DecodeReply(resp.Body, nil)
+	return DecodeReply(resp.Body, result)
 }

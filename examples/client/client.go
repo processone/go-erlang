@@ -10,9 +10,21 @@ import (
 func main() {
 	svc := bert.New("http://localhost:5281/rpc/")
 	c := svc.NewCall("ejabberd_auth", "try_register", "john", "localhost", "password")
-	err := svc.Exec(c, nil)
+	var result struct { // ok | {error, atom()}
+		Tag    string `erlang:"tag"`
+		Reason string `erlang:"tag:error"`
+	}
+	err := svc.Exec(c, &result)
 	if err != nil {
-		log.Fatal("could not create user: ", err)
+		// Protocol or decoding errors
+		log.Fatal("operation failed: ", err)
+	}
+
+	switch result.Tag {
+	case "ok":
+		log.Println("Successfully created user")
+	case "error":
+		log.Fatal("Could not create user: ", result.Reason)
 	}
 }
 
