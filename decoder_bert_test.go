@@ -16,7 +16,7 @@ func TestDecodeErrorReply(t *testing.T) {
 		Data string
 	}
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, &tuple)
+	err := bert.DecodeReply2(buf, &tuple)
 	if err == nil {
 		t.Errorf("bert decoding should have returned an error")
 		return
