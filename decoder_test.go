@@ -200,5 +200,4 @@ func TestDecodeTupleResult(t *testing.T) {
 	if tuple != want {
 		t.Errorf("result does not match expectation: %v", tuple)
 	}
-
 }
