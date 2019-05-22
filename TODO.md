@@ -1,6 +1,7 @@
 # TODO
 
-- Initial version for simple calls.
++ Initial version for simple calls.
+- Rename repository and module to 'erlang', 'erl' or 'gerl'
 - Prepare Erlang module and ejabberd dependency: bert-server
 - Add support for slices / list
 - Add support for BigInt

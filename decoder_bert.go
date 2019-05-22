@@ -11,6 +11,8 @@ import (
 // A Bert call reply is either:
 // {reply, Result}
 // {error, {Type, Code, Class, Detail, Backtrace}}
+// If we pass an empty struct it means we do not care about the reply and we will not try to decode
+// Erlang return.
 func DecodeReply(r io.Reader, term interface{}) error {
 	// Guard against nil decoding target  as it does not guide the decoding
 	if term == nil {
@@ -76,6 +78,12 @@ func DecodeReply(r io.Reader, term interface{}) error {
 // Decode Erlang Term format into a Go structure
 
 func decodeStruct(r io.Reader, val reflect.Value) error {
+	// If the struct is empty, we assume caller is not interested in the result
+	// and we do not try to decode anything.
+	if val.NumField() == 0 {
+		return nil
+	}
+
 	// Get the first field of the interface we are decoding to, to determine
 	// if we are decoding a target value.
 	// It must be a string and be tagged as erlang:"tag"
