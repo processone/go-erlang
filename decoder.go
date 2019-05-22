@@ -16,27 +16,6 @@ TODO: Change the approach ? Fully decode the structure recursively and try to ma
 var ErrRange = errors.New("value out of range")
 var ErrReturn = errors.New("function returns 'error'")
 
-/*
-Special type to decode function call returns.
-
-In general, a function call in Erlang returns one of the following structure:
-- ok
-- error
-- {ok, Result}
-- {error, Reason}
-- Result
-
-It could also throw an error to end in error.
-
-This special type is used to be able to map it with Go convention, either
-getting a valid result or an error.
-*/
-type FunctionResult struct {
-	Success bool
-	Err     error
-	Result  interface{}
-}
-
 func Decode(r io.Reader, term interface{}) error {
 	byte1 := make([]byte, 1)
 	_, err := r.Read(byte1)
