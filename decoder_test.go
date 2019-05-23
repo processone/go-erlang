@@ -130,7 +130,7 @@ func TestFailOnLengthMismatch(t *testing.T) {
 	}
 }
 
-type result struct {
+type result1 struct {
 	Tag    string `erlang:"tag"`
 	Result string `erlang:"tag:ok"`
 	Reason string `erlang:"tag:error"`
@@ -140,21 +140,21 @@ func TestDecodeResult(t *testing.T) {
 	tests := []struct {
 		name  string
 		input []byte
-		want  result
+		want  result1
 	}{
 		// Erlang function returns:
-		{name: "ok", input: []byte{131, 100, 0, 2, 111, 107}, want: result{Tag: "ok"}},
-		{name: "error", input: []byte{131, 100, 0, 5, 101, 114, 114, 111, 114}, want: result{Tag: "error"}},
-		{name: "info", input: []byte{131, 100, 0, 4, 105, 110, 102, 111}, want: result{Tag: "info"}},
+		{name: "ok", input: []byte{131, 100, 0, 2, 111, 107}, want: result1{Tag: "ok"}},
+		{name: "error", input: []byte{131, 100, 0, 5, 101, 114, 114, 111, 114}, want: result1{Tag: "error"}},
+		{name: "info", input: []byte{131, 100, 0, 4, 105, 110, 102, 111}, want: result1{Tag: "info"}},
 		{name: "{ok, Result}", input: []byte{131, 104, 2, 100, 0, 2, 111, 107, 100, 0, 5, 102, 111, 117, 110, 100},
-			want: result{Tag: "ok", Result: "found"}},
+			want: result1{Tag: "ok", Result: "found"}},
 		{name: "{error, Reason}", input: []byte{131, 104, 2, 100, 0, 5, 101, 114, 114, 111, 114, 100, 0, 9, 110, 111, 116, 95,
-			102, 111, 117, 110, 100}, want: result{Tag: "error", Reason: "not_found"}},
+			102, 111, 117, 110, 100}, want: result1{Tag: "error", Reason: "not_found"}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(st *testing.T) {
-			var res result
+			var res result1
 			buf := bytes.NewBuffer(tc.input)
 
 			if err := bert.Decode(buf, &res); err != nil {
@@ -199,5 +199,34 @@ func TestDecodeTupleResult(t *testing.T) {
 
 	if tuple != want {
 		t.Errorf("result does not match expectation: %v", tuple)
+	}
+}
+
+// We have a bert.String type that allow developer to know if the return struct was an atom when this matters.
+// For example, it can be use to make a difference between the atom result not_found and the value "not_found".
+func TestDecodeAtomVsString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+		want  bert.String
+	}{
+		{name: "false as atom", input: []byte{131, 100, 0, 5, 102, 97, 108, 115, 101}, want: bert.A2("false")},
+		{name: "false as result", input: []byte{131, 107, 0, 5, 102, 97, 108, 115, 101}, want: bert.S("false")},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(st *testing.T) {
+			var res bert.String
+			buf := bytes.NewBuffer(tc.input)
+
+			if err := bert.Decode(buf, &res); err != nil {
+				st.Errorf("cannot decode function call result: %s", err)
+				return
+			}
+
+			if tc.want != res {
+				st.Errorf("incorrect result: %#v (!= %#v)", res, tc.want)
+			}
+		})
 	}
 }

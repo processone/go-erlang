@@ -77,6 +77,7 @@ func DecodeReply(r io.Reader, term interface{}) error {
 // ============================================================================
 // Decode Erlang Term format into a Go structure
 
+// TODO ignore unexported fields
 func decodeStruct(r io.Reader, val reflect.Value) error {
 	// If the struct is empty, we assume caller is not interested in the result
 	// and we do not try to decode anything.
@@ -107,9 +108,41 @@ func decodeTaggedValue(r io.Reader, val reflect.Value) error {
 		return err
 	}
 
-	length := 0
-	// TODO: split in two function to make it more readable
 	switch int(byte1[0]) {
+	// We are directly decoding the tag, return it inside the struct:
+	case TagDeprecatedAtom, TagAtomUTF8, TagSmallAtomUTF8:
+		return readTagAtom(r, int(byte1[0]), val)
+	case TagSmallTuple, TagLargeTuple:
+		return readTagTuple(r, int(byte1[0]), val)
+	}
+	/*
+		// If the data is not an atom nor a tuple, we decode in the next data structure that is not associated to a tag
+		// Searching for a freeform raw field
+		structType := val.Type()
+		for i := 1; i < structType.NumField(); i++ {
+			field := structType.Field(i)
+			t, _ := field.Tag.Lookup("erlang")
+			// Field is a tagged value, we skip it
+			if strings.HasPrefix(t, "tag:") {
+				continue
+			}
+
+			// We found a candidate field for decoding
+			currField := val.Field(i)
+			if currField.Kind() == reflect.Ptr {
+				currField = currField.Elem()
+			}
+			if currField.CanAddr() {
+				return readOtherData(r, int(byte1[0]), currField.Addr().Interface())
+			}
+		}
+	*/
+	// We did not find any field to decode the tag to
+	return fmt.Errorf("decodeTaggedValue could not read atom or taggedTuple")
+}
+
+func readTagAtom(r io.Reader, erlangType int, val reflect.Value) error {
+	switch erlangType {
 	// We are directly decoding the tag, return it inside the struct:
 	case TagDeprecatedAtom, TagAtomUTF8:
 		data, err := decodeString2(r)
@@ -127,6 +160,16 @@ func decodeTaggedValue(r io.Reader, val reflect.Value) error {
 		field1 := val.Field(0)
 		field1.SetString(string(data))
 		return nil
+	default:
+		return fmt.Errorf("readTagAtom unexpected mismatch: %d", erlangType)
+	}
+}
+
+func readTagTuple(r io.Reader, erlangType int, val reflect.Value) error {
+	// Get tuple length
+	byte1 := make([]byte, 1)
+	length := 0
+	switch erlangType {
 	case TagSmallTuple:
 		_, err := r.Read(byte1)
 		if err != nil {
@@ -143,11 +186,13 @@ func decodeTaggedValue(r io.Reader, val reflect.Value) error {
 			return fmt.Errorf("truncated data")
 		}
 		length = int(binary.BigEndian.Uint32(byte4))
+	default:
+		return fmt.Errorf("readTagTuple unexpected mismatch: %d", erlangType)
 	}
 
 	// An empty tuple cannot have a tag
 	if length == 0 {
-		return fmt.Errorf("tag expected in empty tuple")
+		return fmt.Errorf("tag cannot be found in an empty tuple")
 	}
 
 	// Extract first field as tag
@@ -181,6 +226,37 @@ func decodeTaggedValue(r io.Reader, val reflect.Value) error {
 	return nil
 }
 
+/*
+func readOtherData(r io.Reader, erlangType int, val reflect.Value) error {
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	switch val.Kind() {
+
+	case reflect.Int8:
+		return ErrRange
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+		i, err := decodeInt(r) // TODO Point to partial decodeInt, passing the Erlang type that was already read
+		if err == nil {
+			val.SetInt(i)
+		}
+		return err
+	case reflect.String:
+		s, err := decodeString(r) // TODO Point to partial decodeString, passing the Erlang type that was already read
+		if err == nil {
+			val.SetString(s)
+		}
+		return err
+
+	default:
+		return fmt.Errorf("readOtherData unexpected mismatch: %s", val.Kind())
+	}
+}
+*/
+
+// ============================================================================
+
 func decodeUntaggedStruct(r io.Reader, val reflect.Value) error {
 	// 1. Get the Erlang type of the tuple
 	byte1 := make([]byte, 1)
@@ -209,7 +285,7 @@ func decodeUntaggedStruct(r io.Reader, val reflect.Value) error {
 		length = int(binary.BigEndian.Uint32(byte4))
 
 	default:
-		return fmt.Errorf("cannot decode type %d to struct %s", int(byte1[0]), val.Type())
+		return fmt.Errorf("cannot decode type %s to struct %s", erlangType(int(byte1[0])), val.Type())
 	}
 
 	return decodeStructElts(r, length, val)

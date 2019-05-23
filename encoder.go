@@ -7,6 +7,34 @@ import (
 	"reflect"
 )
 
+type StringType int
+
+const (
+	StringTypeString = iota
+	StringTypeAtom
+)
+
+type String struct {
+	Value      string
+	ErlangType StringType
+}
+
+func (str String) String() string {
+	return str.Value
+}
+
+func (str String) IsAtom() bool {
+	return str.ErlangType == StringTypeAtom
+}
+
+func A2(atom string) String {
+	return String{Value: atom, ErlangType: StringTypeAtom}
+}
+
+func S(str string) String {
+	return String{Value: str}
+}
+
 // Atom is a wrapper structure to support Erlang atom data type.
 type Atom struct {
 	Value string
@@ -26,14 +54,17 @@ type CharList struct {
 }
 
 // Short factory functions to help write short structure generation code.
+// Atom
 func A(str string) Atom {
 	return Atom{str}
 }
 
+// Tuple
 func T(el ...interface{}) Tuple {
 	return Tuple{el}
 }
 
+// List
 func L(el ...interface{}) []interface{} {
 	return el
 }
@@ -53,6 +84,37 @@ const (
 	TagSmallAtomUTF8  = 119
 	TagETFVersion     = 131
 )
+
+func erlangType(tag int) string {
+	switch tag {
+	case TagSmallInteger:
+		return "SmallInteger"
+	case TagInteger:
+		return "Integer"
+	case TagDeprecatedAtom:
+		return "DeprecatedAtom"
+	case TagSmallTuple:
+		return "SmallTuple"
+	case TagLargeTuple:
+		return "LargeTuple"
+	case TagNil:
+		return "Nil"
+	case TagString:
+		return "String"
+	case TagList:
+		return "List"
+	case TagBinary:
+		return "Binary"
+	case TagAtomUTF8:
+		return "AtomUTF8"
+	case TagSmallAtomUTF8:
+		return "SmallAtomUTF"
+	case TagETFVersion:
+		return "VersionTag"
+	default:
+		return string(tag)
+	}
+}
 
 // Marshal serializes a term as a Bert structure
 func Marshal(term interface{}) ([]byte, error) {

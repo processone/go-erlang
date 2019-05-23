@@ -32,7 +32,6 @@ func Decode(r io.Reader, term interface{}) error {
 	return decodeData(r, term)
 }
 
-// TODO ignore unexported fields
 func decodeData(r io.Reader, term interface{}) error {
 	// Resolve pointers
 	val := reflect.ValueOf(term)
@@ -57,6 +56,10 @@ func decodeData(r io.Reader, term interface{}) error {
 		}
 		return err
 	case reflect.Struct:
+		// Wrapper for basic types
+		if val.Type().Name() == "String" {
+			return decodeBertString(r, val)
+		}
 		return decodeStruct(r, val)
 
 	default:
@@ -128,37 +131,8 @@ func decodeString(r io.Reader) (string, error) {
 		return string(data), err
 
 	case TagList:
-
-		// Count:
-		byte4 := make([]byte, 4)
-		n, err := r.Read(byte4)
-		if err != nil {
-			return "", err
-		}
-		if n < 4 {
-			return "", fmt.Errorf("truncated List data")
-		}
-		count := int(binary.BigEndian.Uint32(byte4))
-
-		s := []rune("")
-		// Last element in list should be termination marker, so we loop (count - 1) times
-		for i := 1; i <= count; i++ {
-			// Assumption: We are decoding a into a string, so we expect all elements to be integers;
-			// We can fail otherwise.
-			char, err := decodeInt(r)
-			if err != nil {
-				return "", err
-			}
-			// Erlang does not encode utf8 charlist into a series of bytes, but use large integers.
-			// We need to process the integer list as runes.
-			s = append(s, rune(char))
-		}
-		// TODO: Check that we have the list termination mark
-		if err := decodeNil(r); err != nil {
-			return string(s), err
-		}
-
-		return string(s), nil
+		data, err := decodeCharList(r)
+		return string(data), err
 	}
 
 	return "", fmt.Errorf("incorrect type: %d", dataType)
@@ -230,6 +204,107 @@ func decodeString4(r io.Reader) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// Decode a string with length on 32 bits.
+func decodeCharList(r io.Reader) ([]rune, error) {
+	// Count:
+	byte4 := make([]byte, 4)
+	n, err := r.Read(byte4)
+	if err != nil {
+		return []rune{}, err
+	}
+	if n < 4 {
+		return []rune{}, fmt.Errorf("truncated List data")
+	}
+	count := int(binary.BigEndian.Uint32(byte4))
+
+	s := []rune("")
+	// Last element in list should be termination marker, so we loop (count - 1) times
+	for i := 1; i <= count; i++ {
+		// Assumption: We are decoding a into a string, so we expect all elements to be integers;
+		// We can fail otherwise.
+		char, err := decodeInt(r)
+		if err != nil {
+			return []rune{}, err
+		}
+		// Erlang does not encode utf8 charlist into a series of bytes, but use large integers.
+		// We need to process the integer list as runes.
+		s = append(s, rune(char))
+	}
+	// Check that we have the list termination mark
+	if err := decodeNil(r); err != nil {
+		return s, err
+	}
+
+	return s, nil
+}
+
+func decodeBertString(r io.Reader, val reflect.Value) error {
+	// Read Tag
+	byte1 := make([]byte, 1)
+	_, err := r.Read(byte1)
+	if err != nil {
+		return err
+	}
+
+	var strValue string
+	var strType int
+
+	// Compare expected type
+	dataType := int(byte1[0])
+	switch dataType {
+
+	case TagSmallAtomUTF8:
+		data, err := decodeString1(r)
+		if err != nil {
+			return err
+		}
+		strValue = string(data)
+		strType = StringTypeAtom
+
+	case TagDeprecatedAtom, TagAtomUTF8:
+		data, err := decodeString2(r)
+		if err != nil {
+			return err
+		}
+		strValue = string(data)
+		strType = StringTypeAtom
+
+	case TagString:
+		data, err := decodeString2(r)
+		if err != nil {
+			return err
+		}
+		strValue = string(data)
+		strType = StringTypeString
+
+	case TagBinary:
+		data, err := decodeString4(r)
+		if err != nil {
+			return err
+		}
+		strValue = string(data)
+		strType = StringTypeString
+
+	case TagList:
+		data, err := decodeCharList(r)
+		if err != nil {
+			return err
+		}
+		strValue = string(data)
+		strType = StringTypeString
+
+	default:
+		return fmt.Errorf("cannot decode %s to bert.String", erlangType(dataType))
+	}
+
+	field := val.FieldByName("Value")
+	field.SetString(strValue)
+	field = val.FieldByName("ErlangType")
+	field.SetInt(int64(strType))
+
+	return nil
 }
 
 // Read a nil value and return error in case of unexpected value.
