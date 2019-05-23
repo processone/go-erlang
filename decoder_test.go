@@ -210,7 +210,7 @@ func TestDecodeAtomVsString(t *testing.T) {
 		input []byte
 		want  bert.String
 	}{
-		{name: "false as atom", input: []byte{131, 100, 0, 5, 102, 97, 108, 115, 101}, want: bert.A2("false")},
+		{name: "false as atom", input: []byte{131, 100, 0, 5, 102, 97, 108, 115, 101}, want: bert.A("false")},
 		{name: "false as result", input: []byte{131, 107, 0, 5, 102, 97, 108, 115, 101}, want: bert.S("false")},
 	}
 

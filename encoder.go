@@ -14,6 +14,9 @@ const (
 	StringTypeAtom
 )
 
+// Atom is a wrapper structure to support Erlang atom data type.
+// That type can be used when you want control / access to the underlying representation,
+// for example to make a difference between atoms and binaries.
 type String struct {
 	Value      string
 	ErlangType StringType
@@ -25,19 +28,6 @@ func (str String) String() string {
 
 func (str String) IsAtom() bool {
 	return str.ErlangType == StringTypeAtom
-}
-
-func A2(atom string) String {
-	return String{Value: atom, ErlangType: StringTypeAtom}
-}
-
-func S(str string) String {
-	return String{Value: str}
-}
-
-// Atom is a wrapper structure to support Erlang atom data type.
-type Atom struct {
-	Value string
 }
 
 type Tuple struct {
@@ -55,8 +45,13 @@ type CharList struct {
 
 // Short factory functions to help write short structure generation code.
 // Atom
-func A(str string) Atom {
-	return Atom{str}
+func A(atom string) String {
+	return String{Value: atom, ErlangType: StringTypeAtom}
+}
+
+// String
+func S(str string) String {
+	return String{Value: str}
 }
 
 // Tuple
@@ -142,8 +137,13 @@ func encodeTo(buf *bytes.Buffer, term interface{}) error {
 	var err error
 	switch t := term.(type) {
 
-	case Atom:
-		err = encodeAtom(buf, t.Value)
+	case String:
+		if t.ErlangType == StringTypeAtom {
+			err = encodeAtom(buf, t.Value)
+		} else {
+			err = encodeString(buf, t.Value)
+		}
+
 	case string:
 		err = encodeString(buf, t)
 
