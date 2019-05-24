@@ -1,7 +1,7 @@
 # TODO
 
 + Initial version for simple calls.
-- Rename repository and module to 'erlang', 'erl' or 'gerl'
+- Rename repository and module to 'erlang', 'erl', 'gerl' or 'goei' (for Go <-> Erlang Interface)
 - Prepare Erlang module and ejabberd dependency: bert-server
 - Add support for slices / list
 - Add support for BigInt
