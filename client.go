@@ -9,6 +9,7 @@ type Client struct {
 	// TODO make httpclient configurable
 }
 
+// TODO: Support getting token for authentication.
 func New(endpoint string) Client {
 	client := Client{Endpoint: endpoint}
 	return client

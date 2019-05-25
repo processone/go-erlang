@@ -29,12 +29,12 @@ func main() {
 }
 
 /*
-This module assumes that ejabberd has been configured with mod_bertrpc support. This module is available starting
-from ejabberd 19.05.
+This module assumes that ejabberd has been configured with ejabberd_rpc support. This module is available in ejabberd
+master repository.
 
 Example config:
 
-# Listener. bertrpc module will be available on localhost ipv6 on port 5281, under /rpc/ http endpoint.
+# Listener. ejabberd bertrpc module will be available on localhost ipv6 on port 5281, under /rpc/ http endpoint.
 listen:
 # ...
   -
@@ -42,6 +42,6 @@ listen:
     ip: "::FFFF:127.0.0.1"
     module: ejabberd_http
     request_handlers:
-      "rpc": mod_bertrpc
+      "rpc": ejabberd_rpc
 
 */
