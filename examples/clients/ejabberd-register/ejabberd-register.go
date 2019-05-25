@@ -34,14 +34,17 @@ master repository.
 
 Example config:
 
-# Listener. ejabberd bertrpc module will be available on localhost ipv6 on port 5281, under /rpc/ http endpoint.
+```
+# Listener. ejabberd bertrpc module will be available on localhost on port 5281, under /rpc/ http endpoint.
 listen:
 # ...
   -
     port: 5281
-    ip: "::FFFF:127.0.0.1"
+    # For IPv6, use:
+    # ip: "::FFFF:127.0.0.1"
+    ip:  "127.0.0.1"
     module: ejabberd_http
     request_handlers:
       "rpc": ejabberd_rpc
-
+```
 */
