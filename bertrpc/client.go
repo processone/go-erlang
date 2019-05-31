@@ -4,9 +4,15 @@ import (
 	"net/http"
 )
 
+// Client create an HTTP client to that holds configuration parameters to make Bert-RPC calls.
 type Client struct {
+	// This is the endpoint used to access bert-rpc server
+	// For now, we only support HTTP endpoints.
 	Endpoint string
-	// TODO make httpclient configurable
+	// This is the security token used to pass call (HTTP bearer token auth)
+	Token string
+
+	// TODO: make httpclient configurable
 }
 
 // TODO: Support getting token for authentication.
@@ -15,6 +21,7 @@ func New(endpoint string) Client {
 	return client
 }
 
+// call is the internal structure to hold bert-rpc call parameters
 type call struct {
 	module   string
 	function string
@@ -33,20 +40,12 @@ func (c Client) Exec(call call, result interface{}) error {
 		return err
 	}
 
-	// Post BERT-RPC call to HTTP endpoint
+	// Use HTTP POST to trigger BERT-RPC call over HTTP
 	resp, err := http.Post(c.Endpoint, "application/bert", &buf)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-
-	/*
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		fmt.Println(body)
-	*/
 
 	return DecodeReply(resp.Body, result)
 }
