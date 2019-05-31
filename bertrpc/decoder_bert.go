@@ -8,6 +8,8 @@ import (
 	"reflect"
 )
 
+var ErrReturn = errors.New("function returns 'error'")
+
 // A Bert call reply is either:
 // {reply, Result}
 // {error, {Type, Code, Class, Detail, Backtrace}}

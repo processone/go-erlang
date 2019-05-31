@@ -9,7 +9,6 @@ import (
 )
 
 var ErrRange = errors.New("value out of range")
-var ErrReturn = errors.New("function returns 'error'")
 
 func Decode(r io.Reader, term interface{}) error {
 	byte1 := make([]byte, 1)
