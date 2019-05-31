@@ -12,7 +12,7 @@ func EncodeCall(module string, function string, args ...interface{}) (bytes.Buff
 
 	// -- {call, Module, Function, Arguments}
 	call := T(A("call"), A(module), A(function), args)
-	data, err := Marshal(call)
+	data, err := Encode(call)
 	if err != nil {
 		return buf, err
 	}

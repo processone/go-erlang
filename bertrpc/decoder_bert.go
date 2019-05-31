@@ -115,28 +115,6 @@ func decodeTaggedValue(r io.Reader, val reflect.Value) error {
 	case TagSmallTuple, TagLargeTuple:
 		return readTagTuple(r, int(byte1[0]), val)
 	}
-	/*
-		// If the data is not an atom nor a tuple, we decode in the next data structure that is not associated to a tag
-		// Searching for a freeform raw field
-		structType := val.Type()
-		for i := 1; i < structType.NumField(); i++ {
-			field := structType.Field(i)
-			t, _ := field.Tag.Lookup("erlang")
-			// Field is a tagged value, we skip it
-			if strings.HasPrefix(t, "tag:") {
-				continue
-			}
-
-			// We found a candidate field for decoding
-			currField := val.Field(i)
-			if currField.Kind() == reflect.Ptr {
-				currField = currField.Elem()
-			}
-			if currField.CanAddr() {
-				return readOtherData(r, int(byte1[0]), currField.Addr().Interface())
-			}
-		}
-	*/
 	// We did not find any field to decode the tag to
 	return fmt.Errorf("decodeTaggedValue could not read atom or taggedTuple")
 }
@@ -227,7 +205,7 @@ func readTagTuple(r io.Reader, erlangType int, val reflect.Value) error {
 }
 
 /*
-func readOtherData(r io.Reader, erlangType int, val reflect.Value) error {
+func readOtherData(r io.Reader, tagName int, val reflect.Value) error {
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
@@ -285,7 +263,7 @@ func decodeUntaggedStruct(r io.Reader, val reflect.Value) error {
 		length = int(binary.BigEndian.Uint32(byte4))
 
 	default:
-		return fmt.Errorf("cannot decode type %s to struct %s", erlangType(int(byte1[0])), val.Type())
+		return fmt.Errorf("cannot decode type %s to struct %s", tagName(int(byte1[0])), val.Type())
 	}
 
 	return decodeStructElts(r, length, val)

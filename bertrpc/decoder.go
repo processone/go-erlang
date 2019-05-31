@@ -291,7 +291,7 @@ func decodeBertString(r io.Reader, val reflect.Value) error {
 		strType = StringTypeString
 
 	default:
-		return fmt.Errorf("cannot decode %s to bert.String", erlangType(dataType))
+		return fmt.Errorf("cannot decode %s to bert.String", tagName(dataType))
 	}
 
 	field := val.FieldByName("Value")

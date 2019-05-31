@@ -7,133 +7,29 @@ import (
 	"reflect"
 )
 
-type StringType int
-
-const (
-	StringTypeString = iota
-	StringTypeAtom
-)
-
-// Atom is a wrapper structure to support Erlang atom data type.
-// That type can be used when you want control / access to the underlying representation,
-// for example to make a difference between atoms and binaries.
-type String struct {
-	Value      string
-	ErlangType StringType
-}
-
-func (str String) String() string {
-	return str.Value
-}
-
-func (str String) IsAtom() bool {
-	return str.ErlangType == StringTypeAtom
-}
-
-type Tuple struct {
-	Elems []interface{}
-}
-
-type List []interface{}
-
-// Charlist is a wrapper structure to support Erlang charlist in encoding.
-// Charlist is only used in encoding. On decoding, charlists are always decoded
-// as strings.
-type CharList struct {
-	Value string
-}
-
-// Short factory functions to help write short structure generation code.
-// Atom
-func A(atom string) String {
-	return String{Value: atom, ErlangType: StringTypeAtom}
-}
-
-// String
-func S(str string) String {
-	return String{Value: str}
-}
-
-// Tuple
-func T(el ...interface{}) Tuple {
-	return Tuple{el}
-}
-
-// List
-func L(el ...interface{}) []interface{} {
-	return el
-}
-
-// Supported types
-const (
-	TagSmallInteger   = 97
-	TagInteger        = 98
-	TagDeprecatedAtom = 100
-	TagSmallTuple     = 104
-	TagLargeTuple     = 105
-	TagNil            = 106
-	TagString         = 107
-	TagList           = 108
-	TagBinary         = 109
-	TagAtomUTF8       = 118
-	TagSmallAtomUTF8  = 119
-	TagETFVersion     = 131
-)
-
-func erlangType(tag int) string {
-	switch tag {
-	case TagSmallInteger:
-		return "SmallInteger"
-	case TagInteger:
-		return "Integer"
-	case TagDeprecatedAtom:
-		return "DeprecatedAtom"
-	case TagSmallTuple:
-		return "SmallTuple"
-	case TagLargeTuple:
-		return "LargeTuple"
-	case TagNil:
-		return "Nil"
-	case TagString:
-		return "String"
-	case TagList:
-		return "List"
-	case TagBinary:
-		return "Binary"
-	case TagAtomUTF8:
-		return "AtomUTF8"
-	case TagSmallAtomUTF8:
-		return "SmallAtomUTF"
-	case TagETFVersion:
-		return "VersionTag"
-	default:
-		return string(tag)
-	}
-}
-
-// Marshal serializes a term as a Bert structure
-func Marshal(term interface{}) ([]byte, error) {
+// Encode serializes a term as a ETF structure
+func Encode(term interface{}) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := MarshalTo(&buf, term); err != nil {
+	if err := EncodeTo(term, &buf); err != nil {
 		return []byte{}, err
 	}
 	return buf.Bytes(), nil
 }
 
-// Use Erlang Term Format
+// Use Erlang External Term Format
 // Reference: http://erlang.org/doc/apps/erts/erl_ext_dist.html
-func MarshalTo(buf *bytes.Buffer, term interface{}) error {
+func EncodeTo(term interface{}, buf *bytes.Buffer) error {
 	// Header for External Erlang Term Format
 	buf.Write([]byte{TagETFVersion})
 
-	// Marshal the data
-	if err := encodeTo(buf, term); err != nil {
+	// Encode the data
+	if err := encodePayloadTo(term, buf); err != nil {
 		return err
 	}
 	return nil
 }
 
-func encodeTo(buf *bytes.Buffer, term interface{}) error {
+func encodePayloadTo(term interface{}, buf *bytes.Buffer) error {
 	var err error
 	switch t := term.(type) {
 
@@ -168,7 +64,7 @@ func encodeTo(buf *bytes.Buffer, term interface{}) error {
 		err = encodeTuple(buf, t)
 
 	default:
-		// Handle special Go pointer types
+		// Defines how to encode Go pointer types
 		v := reflect.ValueOf(term)
 		switch v.Kind() {
 		case reflect.Slice:
@@ -188,13 +84,13 @@ func encodeTo(buf *bytes.Buffer, term interface{}) error {
 }
 
 func encodeAtom(buf *bytes.Buffer, str string) error {
-	// Marshal atom header
+	// Encode atom header
 	if len(str) <= 255 {
-		// Marshal small UTF8 atom
+		// Encode small UTF8 atom
 		buf.WriteByte(TagSmallAtomUTF8)
 		buf.WriteByte(byte(len(str)))
 	} else {
-		// Marshal standard UTF8 atom
+		// Encode standard UTF8 atom
 		buf.WriteByte(TagAtomUTF8)
 		if err := binary.Write(buf, binary.BigEndian, uint16(len(str))); err != nil {
 			return err
@@ -232,11 +128,11 @@ func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
 	// Tuple header
 	size := len(tuple.Elems)
 	if size <= 255 {
-		// Marshal small tuple
+		// Encode small tuple
 		buf.WriteByte(TagSmallTuple)
 		buf.WriteByte(byte(size))
 	} else {
-		// Marshal large tuple
+		// Encode large tuple
 		buf.WriteByte(TagLargeTuple)
 		if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
 			return err
@@ -245,7 +141,7 @@ func encodeTuple(buf *bytes.Buffer, tuple Tuple) error {
 
 	// Tuple content
 	for _, elem := range tuple.Elems {
-		if err := encodeTo(buf, elem); err != nil {
+		if err := encodePayloadTo(elem, buf); err != nil {
 			return err
 		}
 	}
@@ -264,7 +160,7 @@ func encodeList(buf *bytes.Buffer, list []interface{}) error {
 
 	// List content
 	for _, elem := range list {
-		if err := encodeTo(buf, elem); err != nil {
+		if err := encodePayloadTo(elem, buf); err != nil {
 			return err
 		}
 	}

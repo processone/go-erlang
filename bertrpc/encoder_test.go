@@ -9,7 +9,7 @@ import (
 
 func TestEncodeSmallAtom(t *testing.T) {
 	atom := bertrpc.A("atom")
-	data, err := bertrpc.Marshal(atom)
+	data, err := bertrpc.Encode(atom)
 	if err != nil {
 		t.Error(err)
 	}
@@ -22,7 +22,7 @@ func TestEncodeSmallAtom(t *testing.T) {
 
 // We encode strings to binary, but we can force them to charlist (see TestEncodeCharList)
 func TestEncodeString(t *testing.T) {
-	data, err := bertrpc.Marshal("string")
+	data, err := bertrpc.Encode("string")
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +48,7 @@ func TestEncodeInt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		data, err := bertrpc.Marshal(tt.n)
+		data, err := bertrpc.Encode(tt.n)
 		if err != nil {
 			t.Error(err)
 		}
@@ -73,7 +73,7 @@ func TestEncodeMiscInt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		data, err := bertrpc.Marshal(tt.n)
+		data, err := bertrpc.Encode(tt.n)
 		if err != nil {
 			t.Error(err)
 		}
@@ -86,7 +86,7 @@ func TestEncodeMiscInt(t *testing.T) {
 func TestEncodeTuple(t *testing.T) {
 	tuple := bertrpc.T(bertrpc.A("atom"), "string", 42)
 
-	data, err := bertrpc.Marshal(tuple)
+	data, err := bertrpc.Encode(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +108,7 @@ func TestEncodeLargeTuple(t *testing.T) {
 	}
 	tuple := bertrpc.Tuple{els}
 
-	data, err := bertrpc.Marshal(tuple)
+	data, err := bertrpc.Encode(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,7 +124,7 @@ func TestEncodeLargeTuple(t *testing.T) {
 func TestEncodeList(t *testing.T) {
 	list := bertrpc.L(bertrpc.A("atom"), "string", 42)
 
-	data, err := bertrpc.Marshal(list)
+	data, err := bertrpc.Encode(list)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,7 @@ func TestEncodeList(t *testing.T) {
 func TestEncodeIntSlice(t *testing.T) {
 	list := []int{1, 2, 3}
 
-	data, err := bertrpc.Marshal(list)
+	data, err := bertrpc.Encode(list)
 	if err != nil {
 		t.Error(err)
 	}
@@ -155,7 +155,7 @@ func TestEncodeIntSlice(t *testing.T) {
 // Recursive structure: puts a list into a tuple
 func TestEncodeTupleList(t *testing.T) {
 	tuple := bertrpc.T(bertrpc.L(bertrpc.A("atom"), "string", 42))
-	data, err := bertrpc.Marshal(tuple)
+	data, err := bertrpc.Encode(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -169,6 +169,6 @@ func TestEncodeTupleList(t *testing.T) {
 
 func BenchmarkBufferString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = bertrpc.Marshal("test")
+		_, _ = bertrpc.Encode("test")
 	}
 }
