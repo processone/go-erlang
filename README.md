@@ -23,7 +23,7 @@ Here are the important points to note:
 - This version supports BERT-RPC over HTTP. It is not optimal for performance, but can rely on standard HTTP tooling
   features like connection pools, authentication, load balancing, etc.
 - This version implements the type I needed in Erlang External Term Format for interop with
-  [ejabberd](https://github.com/processone/ejabberd/)
+  [ejabberd](https://github.com/processone/ejabberd/).
   
 ### Why use BERT?
 
