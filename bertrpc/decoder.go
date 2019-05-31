@@ -8,11 +8,6 @@ import (
 	"reflect"
 )
 
-/*
-TODO: Change the approach ? Fully decode the structure recursively and try to map it to the target type.
-   It might help handle more complex structure, with several level of embedded structure.
-*/
-
 var ErrRange = errors.New("value out of range")
 var ErrReturn = errors.New("function returns 'error'")
 

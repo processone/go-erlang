@@ -1,9 +1,9 @@
 # Go-Erlang
 
-Go-Erlang is a set of package for Go <-> Erlang interoperability.
+Go-Erlang is a set of tools for Go <-> Erlang interoperability.
 
 The core of the library is the Erlang External Term Format. It is the internal format data to exchange Erlang terms 
-over the network. It is for example used in Erlang distribution protocol.
+over the network. This binary format is used for example in Erlang distribution protocol.
 
 ## Installation
 
