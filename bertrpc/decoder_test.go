@@ -1,18 +1,18 @@
-package bert_test
+package bertrpc_test // import "gosrc.io/erlang/bertrpc_test"
 
 import (
 	"bytes"
 	"strings"
 	"testing"
 
-	"github.com/processone/bert"
+	"gosrc.io/erlang/bertrpc"
 )
 
 // Small Erlang Term type is Uint8. It cannot fit into an int8
 func TestDecodeInt8(t *testing.T) {
 	var i int8
 	buf := bytes.NewBuffer([]byte{131, 97, 255})
-	if err := bert.Decode(buf, &i); err != bert.ErrRange {
+	if err := bertrpc.Decode(buf, &i); err != bertrpc.ErrRange {
 		t.Errorf("Decoding an Erlang small integer into int8 should fail")
 	}
 }
@@ -33,7 +33,7 @@ func TestDecodeInt(t *testing.T) {
 	for _, tc := range tests {
 		var i int
 		buf := bytes.NewBuffer(tc.input)
-		if err := bert.Decode(buf, &i); err != nil {
+		if err := bertrpc.Decode(buf, &i); err != nil {
 			t.Errorf("cannot decode Erlang term: %s", err)
 			return
 		}
@@ -64,7 +64,7 @@ func TestDecodeToString(t *testing.T) {
 	for _, tc := range tests {
 		var a string
 		buf := bytes.NewBuffer(tc.input)
-		if err := bert.Decode(buf, &a); err != nil {
+		if err := bertrpc.Decode(buf, &a); err != nil {
 			t.Errorf("cannot decode Erlang term: %s", err)
 			return
 		}
@@ -81,7 +81,7 @@ func TestDecodeEmptyTuple(t *testing.T) {
 
 	var tuple struct{}
 	buf := bytes.NewBuffer(input)
-	if err := bert.Decode(buf, &tuple); err != nil {
+	if err := bertrpc.Decode(buf, &tuple); err != nil {
 		t.Errorf("cannot decode Erlang term: %s", err)
 		return
 	}
@@ -105,7 +105,7 @@ func TestDecodeTuple2(t *testing.T) {
 		Reason string
 	}
 	buf := bytes.NewBuffer(input)
-	if err := bert.Decode(buf, &tuple); err != nil {
+	if err := bertrpc.Decode(buf, &tuple); err != nil {
 		t.Errorf("cannot decode Erlang term: %s", err)
 		return
 	}
@@ -125,7 +125,7 @@ func TestFailOnLengthMismatch(t *testing.T) {
 		Extra  string
 	}
 	buf := bytes.NewBuffer(input)
-	if err := bert.Decode(buf, &tuple); err == nil {
+	if err := bertrpc.Decode(buf, &tuple); err == nil {
 		t.Errorf("decoding tuple into struct with different number of field should fail")
 	}
 }
@@ -157,7 +157,7 @@ func TestDecodeResult(t *testing.T) {
 			var res result1
 			buf := bytes.NewBuffer(tc.input)
 
-			if err := bert.Decode(buf, &res); err != nil {
+			if err := bertrpc.Decode(buf, &res); err != nil {
 				st.Errorf("cannot decode function call result: %s", err)
 				return
 			}
@@ -192,7 +192,7 @@ func TestDecodeTupleResult(t *testing.T) {
 	}
 	buf := bytes.NewBuffer(input)
 
-	if err := bert.Decode(buf, &tuple); err != nil {
+	if err := bertrpc.Decode(buf, &tuple); err != nil {
 		t.Errorf("cannot decode Erlang term: %s", err)
 		return
 	}
@@ -208,18 +208,18 @@ func TestDecodeAtomVsString(t *testing.T) {
 	tests := []struct {
 		name  string
 		input []byte
-		want  bert.String
+		want  bertrpc.String
 	}{
-		{name: "false as atom", input: []byte{131, 100, 0, 5, 102, 97, 108, 115, 101}, want: bert.A("false")},
-		{name: "false as result", input: []byte{131, 107, 0, 5, 102, 97, 108, 115, 101}, want: bert.S("false")},
+		{name: "false as atom", input: []byte{131, 100, 0, 5, 102, 97, 108, 115, 101}, want: bertrpc.A("false")},
+		{name: "false as result", input: []byte{131, 107, 0, 5, 102, 97, 108, 115, 101}, want: bertrpc.S("false")},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(st *testing.T) {
-			var res bert.String
+			var res bertrpc.String
 			buf := bytes.NewBuffer(tc.input)
 
-			if err := bert.Decode(buf, &res); err != nil {
+			if err := bertrpc.Decode(buf, &res); err != nil {
 				st.Errorf("cannot decode function call result: %s", err)
 				return
 			}

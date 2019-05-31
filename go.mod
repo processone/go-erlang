@@ -1,3 +1,3 @@
-module github.com/processone/bert
+module gosrc.io/erlang
 
 go 1.12

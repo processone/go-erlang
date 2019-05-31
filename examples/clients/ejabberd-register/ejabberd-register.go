@@ -4,11 +4,11 @@ package main
 import (
 	"log"
 
-	"github.com/processone/bert"
+	"gosrc.io/erlang/bertrpc"
 )
 
 func main() {
-	svc := bert.New("http://localhost:5281/rpc/")
+	svc := bertrpc.New("http://localhost:5281/rpc/")
 	c := svc.NewCall("ejabberd_auth", "try_register", "john", "localhost", "password")
 	var result struct { // ok | {error, atom()}
 		Tag    string `erlang:"tag"`

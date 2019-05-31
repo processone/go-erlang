@@ -1,4 +1,4 @@
-package bert
+package bertrpc // import "gosrc.io/erlang/bertrpc"
 
 import (
 	"bytes"

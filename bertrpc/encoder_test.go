@@ -1,15 +1,15 @@
-package bert_test
+package bertrpc_test // import "gosrc.io/erlang/bertrpc_test"
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/processone/bert"
+	"gosrc.io/erlang/bertrpc"
 )
 
 func TestEncodeSmallAtom(t *testing.T) {
-	atom := bert.A("atom")
-	data, err := bert.Marshal(atom)
+	atom := bertrpc.A("atom")
+	data, err := bertrpc.Marshal(atom)
 	if err != nil {
 		t.Error(err)
 	}
@@ -22,7 +22,7 @@ func TestEncodeSmallAtom(t *testing.T) {
 
 // We encode strings to binary, but we can force them to charlist (see TestEncodeCharList)
 func TestEncodeString(t *testing.T) {
-	data, err := bert.Marshal("string")
+	data, err := bertrpc.Marshal("string")
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,18 +37,18 @@ func TestEncodeInt(t *testing.T) {
 		n        int
 		expected []byte
 	}{
-		{-2147483648, []byte{bert.TagETFVersion, bert.TagInteger, 128, 0, 0, 0}},
-		{-1, []byte{bert.TagETFVersion, bert.TagInteger, 255, 255, 255, 255}},
-		{1, []byte{bert.TagETFVersion, bert.TagSmallInteger, 1}},
-		{42, []byte{bert.TagETFVersion, bert.TagSmallInteger, 42}},
-		{255, []byte{bert.TagETFVersion, bert.TagSmallInteger, 255}},
-		{256, []byte{bert.TagETFVersion, bert.TagInteger, 0, 0, 1, 0}},
-		{1000, []byte{bert.TagETFVersion, bert.TagInteger, 0, 0, 3, 232}},
-		{2147483647, []byte{bert.TagETFVersion, bert.TagInteger, 127, 255, 255, 255}},
+		{-2147483648, []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 128, 0, 0, 0}},
+		{-1, []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 255, 255, 255, 255}},
+		{1, []byte{bertrpc.TagETFVersion, bertrpc.TagSmallInteger, 1}},
+		{42, []byte{bertrpc.TagETFVersion, bertrpc.TagSmallInteger, 42}},
+		{255, []byte{bertrpc.TagETFVersion, bertrpc.TagSmallInteger, 255}},
+		{256, []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 0, 0, 1, 0}},
+		{1000, []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 0, 0, 3, 232}},
+		{2147483647, []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 127, 255, 255, 255}},
 	}
 
 	for _, tt := range tests {
-		data, err := bert.Marshal(tt.n)
+		data, err := bertrpc.Marshal(tt.n)
 		if err != nil {
 			t.Error(err)
 		}
@@ -64,16 +64,16 @@ func TestEncodeMiscInt(t *testing.T) {
 		expected []byte
 	}{
 		// TODO: Include standalone header in that test 131.
-		{int16(-256), []byte{bert.TagETFVersion, bert.TagInteger, 255, 255, 255, 0}},
-		{int8(-1), []byte{bert.TagETFVersion, bert.TagInteger, 255, 255, 255, 255}},
-		{uint8(1), []byte{bert.TagETFVersion, bert.TagSmallInteger, 1}},
-		{uint16(256), []byte{bert.TagETFVersion, bert.TagInteger, 0, 0, 1, 0}},
-		{uint32(2147483647), []byte{bert.TagETFVersion, bert.TagInteger, 127, 255, 255, 255}},
-		{int32(2147483647), []byte{bert.TagETFVersion, bert.TagInteger, 127, 255, 255, 255}},
+		{int16(-256), []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 255, 255, 255, 0}},
+		{int8(-1), []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 255, 255, 255, 255}},
+		{uint8(1), []byte{bertrpc.TagETFVersion, bertrpc.TagSmallInteger, 1}},
+		{uint16(256), []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 0, 0, 1, 0}},
+		{uint32(2147483647), []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 127, 255, 255, 255}},
+		{int32(2147483647), []byte{bertrpc.TagETFVersion, bertrpc.TagInteger, 127, 255, 255, 255}},
 	}
 
 	for _, tt := range tests {
-		data, err := bert.Marshal(tt.n)
+		data, err := bertrpc.Marshal(tt.n)
 		if err != nil {
 			t.Error(err)
 		}
@@ -84,9 +84,9 @@ func TestEncodeMiscInt(t *testing.T) {
 }
 
 func TestEncodeTuple(t *testing.T) {
-	tuple := bert.T(bert.A("atom"), "string", 42)
+	tuple := bertrpc.T(bertrpc.A("atom"), "string", 42)
 
-	data, err := bert.Marshal(tuple)
+	data, err := bertrpc.Marshal(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,9 +106,9 @@ func TestEncodeLargeTuple(t *testing.T) {
 	for el := 0; el < 256; el++ {
 		els = append(els, el)
 	}
-	tuple := bert.Tuple{els}
+	tuple := bertrpc.Tuple{els}
 
-	data, err := bert.Marshal(tuple)
+	data, err := bertrpc.Marshal(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,9 +122,9 @@ func TestEncodeLargeTuple(t *testing.T) {
 }
 
 func TestEncodeList(t *testing.T) {
-	list := bert.L(bert.A("atom"), "string", 42)
+	list := bertrpc.L(bertrpc.A("atom"), "string", 42)
 
-	data, err := bert.Marshal(list)
+	data, err := bertrpc.Marshal(list)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,7 @@ func TestEncodeList(t *testing.T) {
 func TestEncodeIntSlice(t *testing.T) {
 	list := []int{1, 2, 3}
 
-	data, err := bert.Marshal(list)
+	data, err := bertrpc.Marshal(list)
 	if err != nil {
 		t.Error(err)
 	}
@@ -154,8 +154,8 @@ func TestEncodeIntSlice(t *testing.T) {
 
 // Recursive structure: puts a list into a tuple
 func TestEncodeTupleList(t *testing.T) {
-	tuple := bert.T(bert.L(bert.A("atom"), "string", 42))
-	data, err := bert.Marshal(tuple)
+	tuple := bertrpc.T(bertrpc.L(bertrpc.A("atom"), "string", 42))
+	data, err := bertrpc.Marshal(tuple)
 	if err != nil {
 		t.Error(err)
 	}
@@ -169,6 +169,6 @@ func TestEncodeTupleList(t *testing.T) {
 
 func BenchmarkBufferString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = bert.Marshal("test")
+		_, _ = bertrpc.Marshal("test")
 	}
 }

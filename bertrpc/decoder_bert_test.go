@@ -1,10 +1,10 @@
-package bert_test
+package bertrpc_test // import "gosrc.io/erlang/bertrpc_test"
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/processone/bert"
+	"gosrc.io/erlang/bertrpc"
 )
 
 // TODO: Refactor the test to work with both the Erlang raw term format and the Bert reply packet
@@ -18,7 +18,7 @@ func TestDecodeSimple(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, &result)
+	err := bertrpc.DecodeReply(buf, &result)
 	if err != nil {
 		t.Errorf("bert decoding failed: %s", err)
 		return
@@ -39,7 +39,7 @@ func TestDecodeErrorReply(t *testing.T) {
 		Result string `erlang:"tag:ok"`
 	}
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, &result)
+	err := bertrpc.DecodeReply(buf, &result)
 	if err != nil {
 		t.Errorf("bert decoding failed: %s", err)
 		return
@@ -67,7 +67,7 @@ func TestDecodeOkReply(t *testing.T) {
 		Count  int    `erlang:"tag:ok"`
 	}
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, &result)
+	err := bertrpc.DecodeReply(buf, &result)
 	if err != nil {
 		t.Errorf("bert decoding failed: %s", err)
 		return
@@ -86,7 +86,7 @@ func TestDecodeReplyToNil(t *testing.T) {
 		97, 110}
 
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, nil)
+	err := bertrpc.DecodeReply(buf, nil)
 	if err == nil {
 		t.Errorf("bert decoding to nil should fail")
 	}
@@ -103,7 +103,7 @@ func TestDecodeOkStruct(t *testing.T) {
 		To   string
 	}
 	buf := bytes.NewBuffer(input)
-	err := bert.DecodeReply(buf, &result)
+	err := bertrpc.DecodeReply(buf, &result)
 	if err != nil {
 		t.Errorf("bert decoding failed: %s", err)
 		return
